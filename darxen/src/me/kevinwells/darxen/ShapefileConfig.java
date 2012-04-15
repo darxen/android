@@ -7,17 +7,11 @@ public class ShapefileConfig implements Parcelable {
 	public int resShp;
 	public int resShx;
 	public int resDbf;
-	
-	public float lineWidth;
-	public Color color;
-	
-	public ShapefileConfig(int resShp, int resDbf, int resShx, float lineWidth,
-			Color color) {
+
+	public ShapefileConfig(int resShp, int resDbf, int resShx) {
 		this.resShp = resShp;
 		this.resDbf = resDbf;
 		this.resShx = resShx;
-		this.lineWidth = lineWidth;
-		this.color = color;
 	}
 
 	@Override
@@ -30,10 +24,27 @@ public class ShapefileConfig implements Parcelable {
 		dest.writeInt(resShp);
 		dest.writeInt(resShx);
 		dest.writeInt(resDbf);
-		
-		dest.writeFloat(lineWidth);
-		dest.writeParcelable(color, flags);
-		
 	}
 	
+	public ShapefileConfig(Parcel in) {
+		resShp = in.readInt();
+		resShx = in.readInt();
+		resDbf = in.readInt();
+	}
+
+	public static final Parcelable.Creator<ShapefileConfig> CREATOR =
+			new Parcelable.Creator<ShapefileConfig>() {
+
+		@Override
+		public ShapefileConfig createFromParcel(Parcel source) {
+			return new ShapefileConfig(source);
+		}
+
+		@Override
+		public ShapefileConfig[] newArray(int size) {
+			return new ShapefileConfig[size];
+		}
+
+	};
+
 }

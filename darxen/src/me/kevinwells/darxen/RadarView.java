@@ -79,7 +79,7 @@ public class RadarView extends GLSurfaceView implements GLSurfaceView.Renderer, 
 		Matrix.setIdentityM(mTransform, 0);
 	}
 
-	public void setData(DataFile file) {
+	public synchronized void setData(DataFile file) {
 		if (mData == null) {
 			//set the initial transform
 			Matrix.setIdentityM(mTransform, 0);
@@ -94,8 +94,12 @@ public class RadarView extends GLSurfaceView implements GLSurfaceView.Renderer, 
 		updateLocation();
 	}
 	
-	public void addLayer(Renderable layer) {
+	public synchronized void addLayer(Renderable layer) {
 		mBackground.add(layer);
+	}
+	
+	public synchronized void removeLayer(Renderable layer) {
+		mBackground.remove(layer);
 	}
 	
 	@Override
@@ -112,7 +116,7 @@ public class RadarView extends GLSurfaceView implements GLSurfaceView.Renderer, 
 		Matrix.multiplyMM(mTransform, 0, mTransform, 16, mTransform, 0);
 	}
 	
-	public void setLocation(LatLon pos) {
+	public synchronized void setLocation(LatLon pos) {
 		mPos = pos;
 		updateLocation();
 	}
@@ -139,9 +143,7 @@ public class RadarView extends GLSurfaceView implements GLSurfaceView.Renderer, 
 	}
 
 	@Override
-	public void onDrawFrame(GL10 gl) {
-		if (mData == null)
-			return;
+	public synchronized void onDrawFrame(GL10 gl) {
 		
 		gl.glClear(GL10.GL_COLOR_BUFFER_BIT | GL10.GL_DEPTH_BUFFER_BIT);
 		gl.glLoadIdentity();
@@ -151,12 +153,14 @@ public class RadarView extends GLSurfaceView implements GLSurfaceView.Renderer, 
 			renderable.render(gl);
 		}
 		
-		RadialDataPacket packet = (RadialDataPacket)mData.description.symbologyBlock.packets[0];
-
-		Color[] palette = CLEANAIR_PALETTE;
-		if (mData.description.opmode == OpMode.PRECIPITATION)
-			palette = REFLECTIVITY_PALETTE;
-		renderRadialData(gl, packet, palette);
+		if (mData != null) {
+			RadialDataPacket packet = (RadialDataPacket)mData.description.symbologyBlock.packets[0];
+	
+			Color[] palette = CLEANAIR_PALETTE;
+			if (mData.description.opmode == OpMode.PRECIPITATION)
+				palette = REFLECTIVITY_PALETTE;
+			renderRadialData(gl, packet, palette);
+		}
 		
 		if (mPosBuf != null) {
 			gl.glColor4f(1.0f, 1.0f, 1.0f, 1.0f);

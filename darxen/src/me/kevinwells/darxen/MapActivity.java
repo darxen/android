@@ -9,12 +9,16 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
+import javax.microedition.khronos.opengles.GL10;
+
 import me.kevinwells.darxen.data.DataFile;
 import me.kevinwells.darxen.data.Level3Parser;
 import me.kevinwells.darxen.data.ParseException;
 import me.kevinwells.darxen.shp.DbfFile;
 import me.kevinwells.darxen.shp.DbfFile.DbfRecord;
 import me.kevinwells.darxen.shp.Shapefile;
+import me.kevinwells.darxen.shp.ShapefileObject;
+import me.kevinwells.darxen.shp.ShapefilePoint;
 
 import org.apache.commons.net.ftp.FTP;
 import org.apache.commons.net.ftp.FTPClient;
@@ -24,6 +28,7 @@ import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.res.Configuration;
 import android.content.res.Resources;
 import android.location.Location;
 import android.location.LocationListener;
@@ -35,6 +40,7 @@ import android.provider.Settings;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.Loader;
 import android.util.Log;
+import android.view.WindowManager;
 import android.widget.FrameLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -62,12 +68,17 @@ public class MapActivity extends SherlockFragmentActivity {
     private static final int TASK_FIND_SITE = 1;
     private static final int TASK_LOAD_RADAR = 2;
     private static final int TASK_LOAD_SHAPEFILES = 3;
-	
+    
+    private List<ShapefileInfo> mShapefiles;
+    
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         requestWindowFeature(Window.FEATURE_INDETERMINATE_PROGRESS);
-        //getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);
+        if (getResources().getConfiguration().orientation == Configuration.ORIENTATION_LANDSCAPE) {
+        	//hide notification area
+        	getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);
+        }
         setContentView(R.layout.main);
         
         mRadarView = new RadarView(this);
@@ -76,7 +87,7 @@ public class MapActivity extends SherlockFragmentActivity {
         mTitle = (TextView)findViewById(R.id.title);
         
         Prefs.unsetLastUpdateTime();
-
+        
         //TODO load cached site from shared prefs
         loadSites();
     }
@@ -97,6 +108,9 @@ public class MapActivity extends SherlockFragmentActivity {
 		switch (item.getItemId()) {
 		case R.id.refresh:
 			update();
+			//mRadarSite.center.lat -= 0.6;
+			//mRadarSite.center.lon -= 0.6;
+			//reloadShapefiles(mRadarSite.center);
 			break;
 		default:
 			return false;
@@ -210,7 +224,7 @@ public class MapActivity extends SherlockFragmentActivity {
     	getSupportLoaderManager().initLoader(TASK_LOAD_SITES, null, mTaskLoadSitesCallbacks);
     }
     
-    private static class LoadSites extends AsyncLoader<ArrayList<RadarSite>> {
+    private static class LoadSites extends CachedAsyncLoader<ArrayList<RadarSite>> {
     	
     	public static LoadSites createInstance(Context context) {
     		return new LoadSites(context);
@@ -274,7 +288,7 @@ public class MapActivity extends SherlockFragmentActivity {
 		getSupportLoaderManager().initLoader(TASK_FIND_SITE, args, mTaskFindSiteCallbacks);
 	}
 	
-    private static class FindSite extends AsyncLoader<RadarSite> {
+    private static class FindSite extends CachedAsyncLoader<RadarSite> {
     	
     	private static final String ARG_RADAR_SITES = "RadarSites";
     	private static final String ARG_POSITION = "Position";
@@ -346,10 +360,10 @@ public class MapActivity extends SherlockFragmentActivity {
 
 	private void loadRadar() {
 		Bundle args = LoadRadar.bundleArgs(mRadarSite);
-		getSupportLoaderManager().initLoader(TASK_LOAD_RADAR, args, mTaskLoadRadarCallbacks);
+		getSupportLoaderManager().initLoader(TASK_LOAD_RADAR, args, mTaskLoadRadarCallbacks).startLoading();
 	}
 	
-    private static class LoadRadar extends AsyncLoader<DataFile> {
+    private static class LoadRadar extends CachedAsyncLoader<DataFile> {
     	
     	private static final String ARG_RADAR_SITE = "RadarSite";
     	
@@ -450,41 +464,129 @@ public class MapActivity extends SherlockFragmentActivity {
     };
     
     private void loadShapefiles(LatLon center) {
-    	Bundle args = LoadShapefiles.bundleArgs(center);
-    	getSupportLoaderManager().initLoader(TASK_LOAD_SHAPEFILES, args, mTaskLoadShapefilesCallbacks);
+    	mLayersLoaded = true;
+	
+    	mShapefiles = new ArrayList<ShapefileInfo>();
+    	{
+        	//states
+    		ShapefileConfig config = new ShapefileConfig(R.raw.states_shp, R.raw.states_dbf, R.raw.states_shx);
+    		ShapefileRenderConfig renderConfig = new ShapefileRenderConfig(new Color(1.0f, 1.0f, 1.0f), 3.0f, GL10.GL_LINE_STRIP);
+    		mShapefiles.add(new ShapefileInfo(config, renderConfig));
+    	}
+    	
+    	//froyo can't read resources >1MB, like county lines
+    	if (Build.VERSION.SDK_INT > 8)
+    	{
+        	//counties
+    		ShapefileConfig config = new ShapefileConfig(R.raw.counties_shp, R.raw.counties_dbf, R.raw.counties_shx);
+    		ShapefileRenderConfig renderConfig = new ShapefileRenderConfig(new Color(0.75f, 0.75f, 0.75f), 1.0f, GL10.GL_LINE_STRIP);
+    		mShapefiles.add(new ShapefileInfo(config, renderConfig));
+    	}
+    	
+    	for (int i = 0; i < mShapefiles.size(); i++) {
+    		ShapefileInfo info = mShapefiles.get(i);
+    		
+    		ShapefileRenderData model = new ShapefileRenderData();
+			loadShapefile(i, center, info.mConfig, model);
+		}
     }
-	private static class LoadShapefiles extends AsyncLoader<Void> {
+    
+    private void reloadShapefiles(LatLon viewpoint) {
+    	for (int i = 0; i < mShapefiles.size(); i++) {
+			int index = TASK_LOAD_SHAPEFILES + i;
+			LoadShapefile loader = LoadShapefile.getInstance(getSupportLoaderManager(), index);
+
+			loader.setViewPoint(viewpoint);
+			loader.startLoading();
+		}	
+    }
+    
+    private void loadShapefile(int index, LatLon center, ShapefileConfig config, ShapefileRenderData data) {
+    	Bundle args = LoadShapefile.bundleArgs(center, config, data);
+    	getSupportLoaderManager().initLoader(TASK_LOAD_SHAPEFILES + index, args, mTaskLoadShapefilesCallbacks);
+    }
+    
+	private static class LoadShapefile extends CachedAsyncLoader<ShapefileRenderData> {
 		
 		private LatLon mCenter;
+		private LatLon mViewpoint;
+		
+		private ShapefileConfig mConfig;
+		private ShapefileRenderData mData;
 		
     	private static final String ARG_CENTER = "Center";
+    	private static final String ARG_CONFIG = "Config";
+    	private static final String ARG_DATA = "Data";
     	
-    	public static Bundle bundleArgs(LatLon center) {
+    	public static Bundle bundleArgs(LatLon center, ShapefileConfig config, ShapefileRenderData data) {
     		Bundle args = new Bundle();
         	args.putParcelable(ARG_CENTER, center);
+        	args.putParcelable(ARG_CONFIG, config);
+        	args.putParcelable(ARG_DATA, data);
         	return args;
     	}
     	
-		public static LoadShapefiles createInstance(Context context, Bundle args) {
+		public static LoadShapefile createInstance(Context context, Bundle args) {
 			LatLon center = args.getParcelable(ARG_CENTER);
-			return new LoadShapefiles(context, center);
+			ShapefileConfig config = args.getParcelable(ARG_CONFIG);
+			ShapefileRenderData data = args.getParcelable(ARG_DATA);
+			return new LoadShapefile(context, center, config, data);
+		}
+		
+		public static LoadShapefile getInstance(LoaderManager manager, int id) {
+			Loader<ShapefileRenderData> res = manager.getLoader(id);
+			return (LoadShapefile)res;
 		}
 	
-		private LoadShapefiles(Context context, LatLon center) {
+		private LoadShapefile(Context context, LatLon center, ShapefileConfig config, ShapefileRenderData data) {
 			super(context);
 			mCenter = center;
-		}
-
-		private ShapefileLayer loadShapefile(ShapefileConfig config) {
+			mConfig = config;
+			mData = data;
 			
+			mViewpoint = mCenter;
+		}
+		
+		private synchronized LatLon getViewpoint() {
+			return mViewpoint;
+		}
+		
+		public synchronized void setViewPoint(LatLon point) {
+			mViewpoint = point;
+		}
+		
+		@Override
+		protected ShapefileRenderData doInBackground() {
+			//mData = mData.clone();
+			
+			LatLon viewpoint = getViewpoint();
+
 			Resources resources = getContext().getResources();
 			
-			InputStream fShp = resources.openRawResource(config.resShp);
-			InputStream fShx = resources.openRawResource(config.resShx);
+			InputStream fShp = resources.openRawResource(mConfig.resShp);
+			InputStream fShx = resources.openRawResource(mConfig.resShx);
 			
 			Shapefile shapefile = new Shapefile(fShp, fShx);
 			try {
-				return new ShapefileLayer(mCenter, shapefile, config);
+				
+				for (int i = 0; i < shapefile.getShapeCount(); i++) {
+					ShapefileObject obj = shapefile.get(i);
+					
+					if (!obj.isNear(viewpoint.lat, viewpoint.lon)) {
+						obj.close();
+						mData.remove(i);
+						continue;
+						
+					} else if (mData.contains(i)) {
+						obj.close();
+						mData.get(i).generateBuffers();
+						continue;
+					}
+					
+					obj.load();
+					mData.add(i, generateObject(obj));
+				}
+				
 			} finally {
 				shapefile.close();
 				
@@ -496,53 +598,89 @@ public class MapActivity extends SherlockFragmentActivity {
 					fShx.close();
 				} catch (IOException e) {}
 			}
+			
+			return mData;
 		}
 		
-		@Override
-		protected Void doInBackground() {
-			ShapefileLayer layer;
+		private ShapefileObjectRenderData generateObject(ShapefileObject obj) {
+			
+			List<ShapefileObjectPartRenderData> parts = new ArrayList<ShapefileObjectPartRenderData>();
 
-			List<ShapefileConfig> configs = new ArrayList<ShapefileConfig>();
-			
-			configs.add(new ShapefileConfig(R.raw.states_shp, R.raw.states_dbf, R.raw.states_shx,
-							3.0f, new Color(1.0f, 1.0f, 1.0f)));
-			
-			//froyo can't read resources >1MB, like county lines
-			if (Build.VERSION.SDK_INT > 8) {
-				configs.add(new ShapefileConfig(R.raw.counties_shp, R.raw.counties_dbf, R.raw.counties_shx,
-							1.0f, new Color(0.75f, 0.75f, 0.75f)));
+			for (int j = 0; j < obj.nParts; j++) {
+				int start = obj.panPartStart[j];
+				int end = start;
+				for (int k = start; k < obj.nVertices; k++) {
+					end = k+1;
+					if (j < obj.nParts-1 && k+1 == obj.panPartStart[j+1])
+						break;
+				}
+				parts.add(generateObjectPart(obj, start, end));
 			}
 			
-			for (ShapefileConfig config : configs) {
-				layer = loadShapefile(config);
-				if (layer == null)
-					continue;
-				
-				mRadarView.addLayer(layer);
-			}
-			
-			return null;
+			ShapefileObjectPartRenderData[] array = new ShapefileObjectPartRenderData[parts.size()];
+			parts.toArray(array);
+			return new ShapefileObjectRenderData(array);
 		}
-		//FIXME REMOVE
-		private static RadarView mRadarView;
+		
+		private LatLon latLon = new LatLon();
+		private ShapefilePoint shapePt = new ShapefilePoint();
+		private Point2D p2 = new Point2D();
+		private ShapefileObjectPartRenderData generateObjectPart(ShapefileObject obj, int start, int end) {
+			int count = end-start;
+			float array[] = new float[count * 2];
+			int j = 0;
+			
+			for (int i = start; i < end; i++) {
+				obj.getPoint(i, shapePt);
+				latLon.lat = shapePt.y;
+				latLon.lon = shapePt.x;
+				p2 = latLon.project(mCenter, p2);
+				array[j++] = (float)p2.x;
+				array[j++] = (float)p2.y;
+			}
+			
+			return new ShapefileObjectPartRenderData(count, array);	
+		}
 	}
-	private LoaderManager.LoaderCallbacks<Void> mTaskLoadShapefilesCallbacks =
-    		new LoaderManager.LoaderCallbacks<Void>() {
+	
+	private LoaderManager.LoaderCallbacks<ShapefileRenderData> mTaskLoadShapefilesCallbacks =
+    		new LoaderManager.LoaderCallbacks<ShapefileRenderData>() {
 		@Override
-		public Loader<Void> onCreateLoader(int id, Bundle args) {
-			//FIXME REMOVE
-			LoadShapefiles.mRadarView = mRadarView;
-			return LoadShapefiles.createInstance(MapActivity.this, args);
+		public Loader<ShapefileRenderData> onCreateLoader(int id, Bundle args) {
+			return LoadShapefile.createInstance(MapActivity.this, args);
 		}
 		@Override
-		public void onLoadFinished(Loader<Void> loader, Void data) {
-			mLayersLoaded = true;
-
+		public void onLoadFinished(Loader<ShapefileRenderData> loader, ShapefileRenderData data) {
+			int index = loader.getId() - TASK_LOAD_SHAPEFILES;
+			ShapefileInfo info = mShapefiles.get(index);
+			
+			if (info.mRenderable == null) {
+				LinearShapefileRenderable renderable = new LinearShapefileRenderable(data, info.mRenderConfig);
+				mRadarView.addLayer(renderable);
+				info.mRenderable = renderable;
+			} else {
+				info.mRenderable.setData(data);
+			}
 			setSupportProgressBarIndeterminateVisibility(false);
 		}
 		@Override
-		public void onLoaderReset(Loader<Void> loader) {
-			//TODO
+		public void onLoaderReset(Loader<ShapefileRenderData> loader) {
+			int index = loader.getId() - TASK_LOAD_SHAPEFILES;
+			ShapefileInfo info = mShapefiles.get(index);
+			
+			mRadarView.removeLayer(info.mRenderable);
 		}
     };
+
+    private class ShapefileInfo
+    {
+    	public ShapefileConfig mConfig;
+    	public ShapefileRenderConfig mRenderConfig;
+    	public LinearShapefileRenderable mRenderable;
+		
+    	public ShapefileInfo(ShapefileConfig config, ShapefileRenderConfig renderConfig) {
+			this.mConfig = config;
+			this.mRenderConfig = renderConfig;
+		}
+    }
 }

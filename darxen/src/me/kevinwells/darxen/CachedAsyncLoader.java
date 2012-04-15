@@ -3,11 +3,11 @@ package me.kevinwells.darxen;
 import android.content.Context;
 import android.support.v4.content.AsyncTaskLoader;
 
-public abstract class AsyncLoader<D> extends AsyncTaskLoader<D> {
+public abstract class CachedAsyncLoader<D> extends AsyncTaskLoader<D> {
 	
 	private D mData;
 
-	public AsyncLoader(Context context) {
+	public CachedAsyncLoader(Context context) {
 		super(context);
 	}
 	
