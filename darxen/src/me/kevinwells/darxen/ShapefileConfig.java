@@ -1,6 +1,9 @@
 package me.kevinwells.darxen;
 
-public class ShapefileConfig {
+import android.os.Parcel;
+import android.os.Parcelable;
+
+public class ShapefileConfig implements Parcelable {
 	public int resShp;
 	public int resShx;
 	public int resDbf;
@@ -16,4 +19,21 @@ public class ShapefileConfig {
 		this.lineWidth = lineWidth;
 		this.color = color;
 	}
+
+	@Override
+	public int describeContents() {
+		return 0;
+	}
+
+	@Override
+	public void writeToParcel(Parcel dest, int flags) {
+		dest.writeInt(resShp);
+		dest.writeInt(resShx);
+		dest.writeInt(resDbf);
+		
+		dest.writeFloat(lineWidth);
+		dest.writeParcelable(color, flags);
+		
+	}
+	
 }

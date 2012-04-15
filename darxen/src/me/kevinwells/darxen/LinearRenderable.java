@@ -4,14 +4,14 @@ import java.nio.FloatBuffer;
 
 import javax.microedition.khronos.opengles.GL10;
 
-public class SimpleRenderable implements Renderable {
+public class LinearRenderable implements Renderable {
 	
 	private FloatBuffer mBuffer;
 	private int mCount;
 	private float mLineWidth;
 	private Color mColor;
 
-	public SimpleRenderable(FloatBuffer buffer, int count, float lineWidth, Color color) {
+	public LinearRenderable(FloatBuffer buffer, int count, float lineWidth, Color color) {
 		mBuffer = buffer;
 		mCount = count;
 		mLineWidth = lineWidth;

@@ -48,7 +48,7 @@ public class ShapefileLayer implements Renderable {
 	private LatLon latLon = new LatLon();
 	private ShapefilePoint shapePt = new ShapefilePoint();
 	private Point2D p2 = new Point2D();
-	private Renderable generateRenderable(ShapefileObject obj, int start, int end) {		
+	private Renderable generateRenderable(ShapefileObject obj, int start, int end) {
 		ByteBuffer vbb = ByteBuffer.allocateDirect((end-start) * 2 * 4);
 		vbb.order(ByteOrder.nativeOrder());
 		FloatBuffer buf = vbb.asFloatBuffer();
@@ -63,7 +63,7 @@ public class ShapefileLayer implements Renderable {
 		}
 		buf.position(0);
 		
-		return new SimpleRenderable(buf, (end-start), mConfig.lineWidth, mConfig.color);
+		return new LinearRenderable(buf, (end-start), mConfig.lineWidth, mConfig.color);
 	}
 
 	@Override

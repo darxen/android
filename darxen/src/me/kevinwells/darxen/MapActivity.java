@@ -24,38 +24,44 @@ import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.res.Resources;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.location.LocationProvider;
-import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.Settings;
+import android.support.v4.app.LoaderManager;
+import android.support.v4.content.Loader;
 import android.util.Log;
 import android.widget.FrameLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.actionbarsherlock.app.SherlockActivity;
+import com.actionbarsherlock.app.SherlockFragmentActivity;
 import com.actionbarsherlock.view.Menu;
 import com.actionbarsherlock.view.MenuItem;
 import com.actionbarsherlock.view.Window;
 
-public class MapActivity extends SherlockActivity {
+public class MapActivity extends SherlockFragmentActivity {
 	
 	private TextView mTitle;
 	private RadarView mRadarView;
-	
     private LocationManager locationManager;
     private LocationListener locationListener;
     
     private LatLon mPosition;
-    private List<RadarSite> mRadarSites;
+    private ArrayList<RadarSite> mRadarSites;
 	
     private boolean mLayersLoaded;
     
     private RadarSite mRadarSite;
+    
+    private static final int TASK_LOAD_SITES = 0;
+    private static final int TASK_FIND_SITE = 1;
+    private static final int TASK_LOAD_RADAR = 2;
+    private static final int TASK_LOAD_SHAPEFILES = 3;
 	
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -63,7 +69,7 @@ public class MapActivity extends SherlockActivity {
         requestWindowFeature(Window.FEATURE_INDETERMINATE_PROGRESS);
         //getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);
         setContentView(R.layout.main);
-
+        
         mRadarView = new RadarView(this);
         ((FrameLayout)findViewById(R.id.container)).addView(mRadarView);
         
@@ -72,7 +78,7 @@ public class MapActivity extends SherlockActivity {
         Prefs.unsetLastUpdateTime();
 
         //TODO load cached site from shared prefs
-        new LoadSites().execute();
+        loadSites();
     }
     
     @Override
@@ -109,7 +115,7 @@ public class MapActivity extends SherlockActivity {
 		
 		setSupportProgressBarIndeterminateVisibility(true);
 		
-        new LoadRadar().execute();
+		loadRadar();
 	}
 	
 	private void updateLocation(Location location) {
@@ -197,46 +203,106 @@ public class MapActivity extends SherlockActivity {
     	if (mRadarSites == null || mPosition == null)
     		return;
     	
-    	new FindSite().execute();
+    	findSite();
     }
     
-    private class LoadSites extends AsyncTask<Void, Void, Void> {
-
-    	private List<RadarSite> mRadarSites;
+    private void loadSites() {
+    	getSupportLoaderManager().initLoader(TASK_LOAD_SITES, null, mTaskLoadSitesCallbacks);
+    }
+    
+    private static class LoadSites extends AsyncLoader<ArrayList<RadarSite>> {
     	
+    	public static LoadSites createInstance(Context context) {
+    		return new LoadSites(context);
+    	}
+    	
+		private LoadSites(Context context) {
+			super(context);
+		}
+
 		@Override
-		protected Void doInBackground(Void... params) {
+		public ArrayList<RadarSite> doInBackground() {
 			
-			mRadarSites = new ArrayList<RadarSite>();
+			ArrayList<RadarSite> radarSites = new ArrayList<RadarSite>();
 			
-			InputStream fin = getResources().openRawResource(R.raw.radars_dbf);
+			InputStream fin = getContext().getResources().openRawResource(R.raw.radars_dbf);
 			DbfFile sites = new DbfFile(fin);
 			for (DbfRecord site : sites) {
 				String name = site.getString(0).toUpperCase();
 				double lat = site.getDouble(1);
 				double lon = site.getDouble(2);
 				
-				mRadarSites.add(new RadarSite(name, new LatLon(lat, lon)));
+				radarSites.add(new RadarSite(name, new LatLon(lat, lon)));
 			}
 			try {
 				sites.close();
+			} catch (Exception e) {}
+			
+			try {
 				fin.close();
 			} catch (IOException e) {}
 			
-			return null;
+			return radarSites;
 		}
 		
 		@Override
-		protected void onPostExecute(Void res) {
-			MapActivity.this.mRadarSites = mRadarSites;
-			initSite();
+		protected boolean shouldUpdate() {
+			//radar sites never change
+			return false;
 		}
     }
+
+    private LoaderManager.LoaderCallbacks<ArrayList<RadarSite>> mTaskLoadSitesCallbacks =
+    		new LoaderManager.LoaderCallbacks<ArrayList<RadarSite>>() {
+		@Override
+		public Loader<ArrayList<RadarSite>> onCreateLoader(int id, Bundle args) {
+			return LoadSites.createInstance(MapActivity.this);
+		}
+		@Override
+		public void onLoadFinished(Loader<ArrayList<RadarSite>> loader, ArrayList<RadarSite> radarSites) {
+			MapActivity.this.mRadarSites = radarSites;
+			initSite();
+		}
+		@Override
+		public void onLoaderReset(Loader<ArrayList<RadarSite>> loader) {
+			MapActivity.this.mRadarSites = null;
+		}
+    };
     
-    private class FindSite extends AsyncTask<Void, Void, RadarSite> {
+	private void findSite() {
+		Bundle args = FindSite.bundleArgs(mRadarSites, mPosition);
+		getSupportLoaderManager().initLoader(TASK_FIND_SITE, args, mTaskFindSiteCallbacks);
+	}
+	
+    private static class FindSite extends AsyncLoader<RadarSite> {
+    	
+    	private static final String ARG_RADAR_SITES = "RadarSites";
+    	private static final String ARG_POSITION = "Position";
+    	
+    	public static Bundle bundleArgs(ArrayList<RadarSite> radarSites, LatLon position) {
+    		Bundle args = new Bundle();
+        	args.putParcelableArrayList(ARG_RADAR_SITES, radarSites);
+        	args.putParcelable(ARG_POSITION, position);
+        	return args;
+    	}
+    	
+    	public static FindSite createInstance(Context context, Bundle args) {
+    		ArrayList<RadarSite> radarSites = args.getParcelableArrayList(ARG_RADAR_SITES);
+			LatLon position = args.getParcelable(ARG_POSITION);
+			return new FindSite(context, radarSites, position);
+    	}
+    	
+    	private List<RadarSite> mRadarSites;
+    	private LatLon mPosition;
+    	
+    	private FindSite(Context context, List<RadarSite> radarSites, LatLon position) {
+    		super(context);
+    		mRadarSites = radarSites;
+    		mPosition = position;
+    	}
 
 		@Override
-		protected RadarSite doInBackground(Void... params) {
+		protected RadarSite doInBackground() {
 			double[] distances = new double[mRadarSites.size()];
 			
 			for (int i = 0; i < mRadarSites.size(); i++)
@@ -255,16 +321,58 @@ public class MapActivity extends SherlockActivity {
 		}
 		
 		@Override
-		protected void onPostExecute(RadarSite radarSite) {
-			mRadarSite = radarSite;
-			update();
+		protected boolean shouldUpdate() {
+			//shouldn't ever wander to far
+			return false;
 		}
     }
     
-    private class LoadRadar extends AsyncTask<Void, Void, DataFile> {
+    private LoaderManager.LoaderCallbacks<RadarSite> mTaskFindSiteCallbacks =
+    		new LoaderManager.LoaderCallbacks<RadarSite>() {
+		@Override
+		public Loader<RadarSite> onCreateLoader(int id, Bundle args) {
+			return FindSite.createInstance(MapActivity.this, args);
+		}
+		@Override
+		public void onLoadFinished(Loader<RadarSite> loader, RadarSite radarSite) {
+			mRadarSite = radarSite;
+			update();
+		}
+		@Override
+		public void onLoaderReset(Loader<RadarSite> loader) {
+			mRadarSite = null;
+		}
+    };
+
+	private void loadRadar() {
+		Bundle args = LoadRadar.bundleArgs(mRadarSite);
+		getSupportLoaderManager().initLoader(TASK_LOAD_RADAR, args, mTaskLoadRadarCallbacks);
+	}
+	
+    private static class LoadRadar extends AsyncLoader<DataFile> {
+    	
+    	private static final String ARG_RADAR_SITE = "RadarSite";
+    	
+    	public static Bundle bundleArgs(RadarSite radarSite) {
+    		Bundle args = new Bundle();
+    		args.putParcelable(ARG_RADAR_SITE, radarSite);
+    		return args;
+    	}
+    	
+    	public static LoadRadar createInstance(Context context, Bundle args) {
+    		RadarSite radarSite = args.getParcelable(ARG_RADAR_SITE);
+			return new LoadRadar(context, radarSite);
+    	}
+    	
+    	private RadarSite mRadarSite;
+    	
+    	private LoadRadar(Context context, RadarSite radarSite) {
+    		super(context);
+    		mRadarSite = radarSite;
+    	}
 
 		@Override
-		protected DataFile doInBackground(Void... params) {
+		protected DataFile doInBackground() {
 			byte[] data = null;
 			do {
 		        try {
@@ -288,28 +396,6 @@ public class MapActivity extends SherlockActivity {
 	        
 	        return file;
 		}
-		
-		@Override
-		protected void onPostExecute(DataFile data) {
-			if (data == null) {
-				finish();
-				return;
-			}
-
-	        mTitle.setText(new String(data.header).replace("\n", ""));
-			
-	        if (!mLayersLoaded) {
-	        	new LoadShapefiles(new LatLon(data.description.lat, data.description.lon)).execute();
-	        }
-			
-			mRadarView.setData(data);
-			
-			if (mLayersLoaded) {
-				setSupportProgressBarIndeterminateVisibility(false);
-			}
-			
-			Prefs.setLastUpdateTime(new Date());
-		}
 
 		private byte[] getData(RadarSite radarSite) throws SocketException, IOException {
 	    	ByteArrayOutputStream fout = new ByteArrayOutputStream();
@@ -330,18 +416,71 @@ public class MapActivity extends SherlockActivity {
 	        return fout.toByteArray();
 	    }
     }
+    private LoaderManager.LoaderCallbacks<DataFile> mTaskLoadRadarCallbacks =
+    		new LoaderManager.LoaderCallbacks<DataFile>() {
+		@Override
+		public Loader<DataFile> onCreateLoader(int id, Bundle args) {
+			return LoadRadar.createInstance(MapActivity.this, args);
+		}
+		@Override
+		public void onLoadFinished(Loader<DataFile> loader, DataFile data) {
+			if (data == null) {
+				finish();
+				return;
+			}
+
+	        mTitle.setText(new String(data.header).replace("\n", ""));
+			
+	        if (!mLayersLoaded) {
+	        	loadShapefiles(new LatLon(data.description.lat, data.description.lon));
+	        }
+			
+			mRadarView.setData(data);
+			
+			if (mLayersLoaded) {
+				setSupportProgressBarIndeterminateVisibility(false);
+			}
+
+			Prefs.setLastUpdateTime(new Date());
+		}
+		@Override
+		public void onLoaderReset(Loader<DataFile> loader) {
+			mRadarView.setData(null);
+		}
+    };
     
-	private class LoadShapefiles extends AsyncTask<Void, Void, Void> {
+    private void loadShapefiles(LatLon center) {
+    	Bundle args = LoadShapefiles.bundleArgs(center);
+    	getSupportLoaderManager().initLoader(TASK_LOAD_SHAPEFILES, args, mTaskLoadShapefilesCallbacks);
+    }
+	private static class LoadShapefiles extends AsyncLoader<Void> {
+		
 		private LatLon mCenter;
+		
+    	private static final String ARG_CENTER = "Center";
+    	
+    	public static Bundle bundleArgs(LatLon center) {
+    		Bundle args = new Bundle();
+        	args.putParcelable(ARG_CENTER, center);
+        	return args;
+    	}
+    	
+		public static LoadShapefiles createInstance(Context context, Bundle args) {
+			LatLon center = args.getParcelable(ARG_CENTER);
+			return new LoadShapefiles(context, center);
+		}
 	
-		public LoadShapefiles(LatLon center) {
+		private LoadShapefiles(Context context, LatLon center) {
+			super(context);
 			mCenter = center;
 		}
 
 		private ShapefileLayer loadShapefile(ShapefileConfig config) {
 			
-			InputStream fShp = getResources().openRawResource(config.resShp);
-			InputStream fShx = getResources().openRawResource(config.resShx);
+			Resources resources = getContext().getResources();
+			
+			InputStream fShp = resources.openRawResource(config.resShp);
+			InputStream fShx = resources.openRawResource(config.resShx);
 			
 			Shapefile shapefile = new Shapefile(fShp, fShx);
 			try {
@@ -360,7 +499,7 @@ public class MapActivity extends SherlockActivity {
 		}
 		
 		@Override
-		protected Void doInBackground(Void... params) {
+		protected Void doInBackground() {
 			ShapefileLayer layer;
 
 			List<ShapefileConfig> configs = new ArrayList<ShapefileConfig>();
@@ -384,13 +523,26 @@ public class MapActivity extends SherlockActivity {
 			
 			return null;
 		}
-		
+		//FIXME REMOVE
+		private static RadarView mRadarView;
+	}
+	private LoaderManager.LoaderCallbacks<Void> mTaskLoadShapefilesCallbacks =
+    		new LoaderManager.LoaderCallbacks<Void>() {
 		@Override
-		protected void onPostExecute(Void res) {
+		public Loader<Void> onCreateLoader(int id, Bundle args) {
+			//FIXME REMOVE
+			LoadShapefiles.mRadarView = mRadarView;
+			return LoadShapefiles.createInstance(MapActivity.this, args);
+		}
+		@Override
+		public void onLoadFinished(Loader<Void> loader, Void data) {
 			mLayersLoaded = true;
 
 			setSupportProgressBarIndeterminateVisibility(false);
 		}
-
-	}
+		@Override
+		public void onLoaderReset(Loader<Void> loader) {
+			//TODO
+		}
+    };
 }

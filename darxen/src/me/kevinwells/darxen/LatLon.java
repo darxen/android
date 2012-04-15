@@ -1,6 +1,9 @@
 package me.kevinwells.darxen;
 
-public class LatLon {
+import android.os.Parcel;
+import android.os.Parcelable;
+
+public class LatLon implements Parcelable {
 	
 	public double lat;
 	public double lon;
@@ -87,4 +90,32 @@ public class LatLon {
 		return new Point3D(resX, resY, resZ);
 	}
 
+	@Override
+	public int describeContents() {
+		return 0;
+	}
+
+	@Override
+	public void writeToParcel(Parcel parcel, int flags) {
+		parcel.writeDouble(lat);
+		parcel.writeDouble(lon);
+	}
+
+	public LatLon(Parcel in) {
+		lat = in.readDouble();
+		lon = in.readDouble();
+	}
+	
+	public static final Parcelable.Creator<LatLon> CREATOR =
+			new Parcelable.Creator<LatLon>() {
+		@Override
+		public LatLon createFromParcel(Parcel source) {
+			return new LatLon(source);
+		}
+
+		@Override
+		public LatLon[] newArray(int size) {
+			return new LatLon[size];
+		}
+	};
 }
