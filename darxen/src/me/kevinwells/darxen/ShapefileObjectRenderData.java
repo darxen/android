@@ -10,12 +10,6 @@ public class ShapefileObjectRenderData implements Parcelable {
 	public ShapefileObjectRenderData(ShapefileObjectPartRenderData[] parts) {
 		mParts = parts;
 	}
-	
-	public void generateBuffers() {
-		for (int i = 0; i < mParts.length; i++) {
-			mParts[i].generateBuffer();
-		}
-	}
 
 	@Override
 	public int describeContents() {

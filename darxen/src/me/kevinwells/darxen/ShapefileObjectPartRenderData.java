@@ -12,29 +12,24 @@ public class ShapefileObjectPartRenderData implements Parcelable {
 	//public int id;
 	public int mCount;
 
-	public float[] mArray;
 	private FloatBuffer mBuffer;
 	
 	public ShapefileObjectPartRenderData(int count, float[] array) {
 		mCount = count;
-		mArray = array;
 		
-		generateBuffer();
+		generateBuffer(array);
 	}
 	
-	public void generateBuffer() {
+	private void generateBuffer(float[] array) {
 		if (mBuffer != null) {
-			return;
-			//throw new IllegalStateException("Buffer already populated");
+			throw new IllegalStateException("Buffer already populated");
 		}
 
-		ByteBuffer vbb = ByteBuffer.allocateDirect(mArray.length * 4);
+		ByteBuffer vbb = ByteBuffer.allocateDirect(array.length * 4);
 		vbb.order(ByteOrder.nativeOrder());
 		mBuffer = vbb.asFloatBuffer();
 		
-		for (int i = 0; i < mArray.length; i++) {
-			mBuffer.put(mArray[i]);
-		}
+		mBuffer.put(array);
 		mBuffer.position(0);
 	}
 
@@ -51,16 +46,26 @@ public class ShapefileObjectPartRenderData implements Parcelable {
 
 	@Override
 	public void writeToParcel(Parcel dest, int flags) {
-		//dest.writeInt(id);
 		dest.writeInt(mCount);
-		dest.writeFloatArray(mArray);
-		// can't parcel buffer
+		
+		int size = mBuffer.capacity();
+		dest.writeInt(size);
+		for (int i = 0; i < size; i++) {
+			dest.writeFloat(mBuffer.get(i));
+		}
 	}
 
 	public ShapefileObjectPartRenderData(Parcel in) {
-		//id = in.readInt();
 		mCount = in.readInt();
-		mArray = in.createFloatArray();
+		
+		int size = in.readInt();
+		ByteBuffer vbb = ByteBuffer.allocateDirect(size);
+		vbb.order(ByteOrder.nativeOrder());
+		mBuffer = vbb.asFloatBuffer();
+		for (int i = 0; i < size; i++) {
+			mBuffer.put(in.readFloat());
+		}
+		mBuffer.position(0);
 	}
 
 	public static final Parcelable.Creator<ShapefileObjectPartRenderData> CREATOR =

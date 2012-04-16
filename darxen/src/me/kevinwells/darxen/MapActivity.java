@@ -610,7 +610,6 @@ public class MapActivity extends SherlockFragmentActivity {
 						
 					} else if (mData.contains(i)) {
 						obj.close();
-						mData.get(i).generateBuffers();
 						continue;
 					}
 					
