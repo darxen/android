@@ -9,7 +9,6 @@ import android.os.Parcelable;
 
 public class ShapefileObjectPartRenderData implements Parcelable {
 
-	//public int id;
 	public int mCount;
 
 	private FloatBuffer mBuffer;

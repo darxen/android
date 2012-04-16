@@ -1,10 +1,5 @@
 package me.kevinwells.darxen;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -12,24 +7,15 @@ import java.util.List;
 import javax.microedition.khronos.opengles.GL10;
 
 import me.kevinwells.darxen.data.DataFile;
-import me.kevinwells.darxen.data.Level3Parser;
-import me.kevinwells.darxen.data.ParseException;
-import me.kevinwells.darxen.shp.DbfFile;
-import me.kevinwells.darxen.shp.DbfFile.DbfRecord;
-import me.kevinwells.darxen.shp.Shapefile;
-import me.kevinwells.darxen.shp.ShapefileObject;
-import me.kevinwells.darxen.shp.ShapefilePoint;
-
-import org.apache.commons.net.ftp.FTP;
-import org.apache.commons.net.ftp.FTPClient;
-import org.apache.commons.net.ftp.FTPReply;
-
+import me.kevinwells.darxen.loaders.FindSite;
+import me.kevinwells.darxen.loaders.LoadRadar;
+import me.kevinwells.darxen.loaders.LoadShapefile;
+import me.kevinwells.darxen.loaders.LoadSites;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.res.Configuration;
-import android.content.res.Resources;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
@@ -223,48 +209,6 @@ public class MapActivity extends SherlockFragmentActivity {
     private void loadSites() {
     	getSupportLoaderManager().initLoader(TASK_LOAD_SITES, null, mTaskLoadSitesCallbacks);
     }
-    
-    private static class LoadSites extends CachedAsyncLoader<ArrayList<RadarSite>> {
-    	
-    	public static LoadSites createInstance(Context context) {
-    		return new LoadSites(context);
-    	}
-    	
-		private LoadSites(Context context) {
-			super(context);
-		}
-
-		@Override
-		public ArrayList<RadarSite> doInBackground() {
-			
-			ArrayList<RadarSite> radarSites = new ArrayList<RadarSite>();
-			
-			InputStream fin = getContext().getResources().openRawResource(R.raw.radars_dbf);
-			DbfFile sites = new DbfFile(fin);
-			for (DbfRecord site : sites) {
-				String name = site.getString(0).toUpperCase();
-				double lat = site.getDouble(1);
-				double lon = site.getDouble(2);
-				
-				radarSites.add(new RadarSite(name, new LatLon(lat, lon)));
-			}
-			try {
-				sites.close();
-			} catch (Exception e) {}
-			
-			try {
-				fin.close();
-			} catch (IOException e) {}
-			
-			return radarSites;
-		}
-		
-		@Override
-		protected boolean shouldUpdate() {
-			//radar sites never change
-			return false;
-		}
-    }
 
     private LoaderManager.LoaderCallbacks<ArrayList<RadarSite>> mTaskLoadSitesCallbacks =
     		new LoaderManager.LoaderCallbacks<ArrayList<RadarSite>>() {
@@ -288,59 +232,6 @@ public class MapActivity extends SherlockFragmentActivity {
 		getSupportLoaderManager().initLoader(TASK_FIND_SITE, args, mTaskFindSiteCallbacks);
 	}
 	
-    private static class FindSite extends CachedAsyncLoader<RadarSite> {
-    	
-    	private static final String ARG_RADAR_SITES = "RadarSites";
-    	private static final String ARG_POSITION = "Position";
-    	
-    	public static Bundle bundleArgs(ArrayList<RadarSite> radarSites, LatLon position) {
-    		Bundle args = new Bundle();
-        	args.putParcelableArrayList(ARG_RADAR_SITES, radarSites);
-        	args.putParcelable(ARG_POSITION, position);
-        	return args;
-    	}
-    	
-    	public static FindSite createInstance(Context context, Bundle args) {
-    		ArrayList<RadarSite> radarSites = args.getParcelableArrayList(ARG_RADAR_SITES);
-			LatLon position = args.getParcelable(ARG_POSITION);
-			return new FindSite(context, radarSites, position);
-    	}
-    	
-    	private List<RadarSite> mRadarSites;
-    	private LatLon mPosition;
-    	
-    	private FindSite(Context context, List<RadarSite> radarSites, LatLon position) {
-    		super(context);
-    		mRadarSites = radarSites;
-    		mPosition = position;
-    	}
-
-		@Override
-		protected RadarSite doInBackground() {
-			double[] distances = new double[mRadarSites.size()];
-			
-			for (int i = 0; i < mRadarSites.size(); i++)
-				distances[i] = mPosition.distanceTo(mRadarSites.get(i).center);
-			
-			double minValue = distances[0];
-			int minIndex = 0;
-			for (int i = 1; i < distances.length; i++) {
-				if (distances[i] < minValue) {
-					minValue = distances[i];
-					minIndex = i;
-				}
-			}
-			
-			return mRadarSites.get(minIndex);
-		}
-		
-		@Override
-		protected boolean shouldUpdate() {
-			//shouldn't ever wander to far
-			return false;
-		}
-    }
-    
     private LoaderManager.LoaderCallbacks<RadarSite> mTaskFindSiteCallbacks =
     		new LoaderManager.LoaderCallbacks<RadarSite>() {
 		@Override
@@ -363,73 +254,6 @@ public class MapActivity extends SherlockFragmentActivity {
 		getSupportLoaderManager().initLoader(TASK_LOAD_RADAR, args, mTaskLoadRadarCallbacks).startLoading();
 	}
 	
-    private static class LoadRadar extends CachedAsyncLoader<DataFile> {
-    	
-    	private static final String ARG_RADAR_SITE = "RadarSite";
-    	
-    	public static Bundle bundleArgs(RadarSite radarSite) {
-    		Bundle args = new Bundle();
-    		args.putParcelable(ARG_RADAR_SITE, radarSite);
-    		return args;
-    	}
-    	
-    	public static LoadRadar createInstance(Context context, Bundle args) {
-    		RadarSite radarSite = args.getParcelable(ARG_RADAR_SITE);
-			return new LoadRadar(context, radarSite);
-    	}
-    	
-    	private RadarSite mRadarSite;
-    	
-    	private LoadRadar(Context context, RadarSite radarSite) {
-    		super(context);
-    		mRadarSite = radarSite;
-    	}
-
-		@Override
-		protected DataFile doInBackground() {
-			byte[] data = null;
-			do {
-		        try {
-		        	data = getData(mRadarSite);
-				} catch (IOException e) {
-					Log.e(C.TAG, "Failed to download radar imagery", e);
-				}
-			} while (data == null);
-	        
-	        Level3Parser parser = new Level3Parser();
-	        DataFile file;
-	        try {
-				file = parser.parse(new ByteArrayInputStream(data));
-			} catch (ParseException e) {
-				Log.e(C.TAG, "Failed to parse radar imagery", e);
-				return null;
-			} catch (IOException e) {
-				Log.e(C.TAG, "Failed to parse radar imagery", e);
-				return null;
-			}
-	        
-	        return file;
-		}
-
-		private byte[] getData(RadarSite radarSite) throws SocketException, IOException {
-	    	ByteArrayOutputStream fout = new ByteArrayOutputStream();
-	        
-	    	FTPClient ftpClient = new FTPClient();
-			ftpClient.connect("tgftp.nws.noaa.gov", 21);
-			if (!FTPReply.isPositiveCompletion(ftpClient.getReplyCode()))
-				throw new IOException("Failed to connect");
-			ftpClient.login("anonymous", "darxen");
-			
-			ftpClient.changeWorkingDirectory("SL.us008001/DF.of/DC.radar/DS.p19r0/SI." + radarSite.name.toLowerCase());
-			ftpClient.setFileType(FTP.BINARY_FILE_TYPE);
-			ftpClient.enterLocalPassiveMode();
-			ftpClient.retrieveFile("sn.last", fout);
-			fout.close();
-			ftpClient.disconnect();
-			
-	        return fout.toByteArray();
-	    }
-    }
     private LoaderManager.LoaderCallbacks<DataFile> mTaskLoadRadarCallbacks =
     		new LoaderManager.LoaderCallbacks<DataFile>() {
 		@Override
@@ -533,146 +357,6 @@ public class MapActivity extends SherlockFragmentActivity {
 		});    	
     }
     
-	private static class LoadShapefile extends CachedAsyncLoader<ShapefileRenderData> {
-		
-		private LatLon mCenter;
-		private LatLon mViewpoint;
-		
-		private ShapefileConfig mConfig;
-		private ShapefileRenderData mData;
-		
-    	private static final String ARG_CENTER = "Center";
-    	private static final String ARG_CONFIG = "Config";
-    	private static final String ARG_DATA = "Data";
-    	
-    	public static Bundle bundleArgs(LatLon center, ShapefileConfig config, ShapefileRenderData data) {
-    		Bundle args = new Bundle();
-        	args.putParcelable(ARG_CENTER, center);
-        	args.putParcelable(ARG_CONFIG, config);
-        	args.putParcelable(ARG_DATA, data);
-        	return args;
-    	}
-    	
-		public static LoadShapefile createInstance(Context context, Bundle args) {
-			LatLon center = args.getParcelable(ARG_CENTER);
-			ShapefileConfig config = args.getParcelable(ARG_CONFIG);
-			ShapefileRenderData data = args.getParcelable(ARG_DATA);
-			return new LoadShapefile(context, center, config, data);
-		}
-		
-		public static LoadShapefile getInstance(LoaderManager manager, int id) {
-			Loader<ShapefileRenderData> res = manager.getLoader(id);
-			return (LoadShapefile)res;
-		}
-		
-		public static LoadShapefile castInstance(Loader<ShapefileRenderData> loader) {
-			return (LoadShapefile)loader;
-		}
-	
-		private LoadShapefile(Context context, LatLon center, ShapefileConfig config, ShapefileRenderData data) {
-			super(context);
-			mCenter = center;
-			mConfig = config;
-			mData = data;
-			
-			mViewpoint = mCenter;
-		}
-		
-		private synchronized LatLon getViewpoint() {
-			return mViewpoint;
-		}
-		
-		public synchronized void setViewPoint(LatLon point) {
-			mViewpoint = point;
-		}
-		
-		@Override
-		protected ShapefileRenderData doInBackground() {
-			//mData = mData.clone();
-			
-			LatLon viewpoint = getViewpoint();
-
-			Resources resources = getContext().getResources();
-			
-			InputStream fShp = resources.openRawResource(mConfig.resShp);
-			InputStream fShx = resources.openRawResource(mConfig.resShx);
-			
-			Shapefile shapefile = new Shapefile(fShp, fShx);
-			try {
-				
-				for (int i = 0; i < shapefile.getShapeCount(); i++) {
-					ShapefileObject obj = shapefile.get(i);
-					
-					if (!obj.isNear(viewpoint.lat, viewpoint.lon)) {
-						obj.close();
-						mData.remove(i);
-						continue;
-						
-					} else if (mData.contains(i)) {
-						obj.close();
-						continue;
-					}
-					
-					obj.load();
-					mData.add(i, generateObject(obj));
-				}
-				
-			} finally {
-				shapefile.close();
-				
-				try {
-					fShp.close();
-				} catch (IOException e) {}
-
-				try {
-					fShx.close();
-				} catch (IOException e) {}
-			}
-			
-			return mData;
-		}
-		
-		private ShapefileObjectRenderData generateObject(ShapefileObject obj) {
-			
-			List<ShapefileObjectPartRenderData> parts = new ArrayList<ShapefileObjectPartRenderData>();
-
-			for (int j = 0; j < obj.nParts; j++) {
-				int start = obj.panPartStart[j];
-				int end = start;
-				for (int k = start; k < obj.nVertices; k++) {
-					end = k+1;
-					if (j < obj.nParts-1 && k+1 == obj.panPartStart[j+1])
-						break;
-				}
-				parts.add(generateObjectPart(obj, start, end));
-			}
-			
-			ShapefileObjectPartRenderData[] array = new ShapefileObjectPartRenderData[parts.size()];
-			parts.toArray(array);
-			return new ShapefileObjectRenderData(array);
-		}
-		
-		private LatLon latLon = new LatLon();
-		private ShapefilePoint shapePt = new ShapefilePoint();
-		private Point2D p2 = new Point2D();
-		private ShapefileObjectPartRenderData generateObjectPart(ShapefileObject obj, int start, int end) {
-			int count = end-start;
-			float array[] = new float[count * 2];
-			int j = 0;
-			
-			for (int i = start; i < end; i++) {
-				obj.getPoint(i, shapePt);
-				latLon.lat = shapePt.y;
-				latLon.lon = shapePt.x;
-				p2 = latLon.project(mCenter, p2);
-				array[j++] = (float)p2.x;
-				array[j++] = (float)p2.y;
-			}
-			
-			return new ShapefileObjectPartRenderData(count, array);	
-		}
-	}
-	
 	private LoaderManager.LoaderCallbacks<ShapefileRenderData> mTaskLoadShapefilesCallbacks =
     		new LoaderManager.LoaderCallbacks<ShapefileRenderData>() {
 		@Override

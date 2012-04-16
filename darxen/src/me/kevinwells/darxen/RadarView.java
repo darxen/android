@@ -17,7 +17,6 @@ import android.content.Context;
 import android.opengl.GLSurfaceView;
 import android.opengl.GLU;
 import android.opengl.Matrix;
-import android.util.Log;
 import android.view.MotionEvent;
 
 public class RadarView extends GLSurfaceView implements GLSurfaceView.Renderer, GestureSurface {
