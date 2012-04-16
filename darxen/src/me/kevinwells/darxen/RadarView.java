@@ -17,6 +17,7 @@ import android.content.Context;
 import android.opengl.GLSurfaceView;
 import android.opengl.GLU;
 import android.opengl.Matrix;
+import android.util.Log;
 import android.view.MotionEvent;
 
 public class RadarView extends GLSurfaceView implements GLSurfaceView.Renderer, GestureSurface {
@@ -34,6 +35,8 @@ public class RadarView extends GLSurfaceView implements GLSurfaceView.Renderer, 
 	
 	private List<Renderable> mBackground;
 	private List<Renderable> mForeground;
+	
+	private ViewpointListener mViewpointListener;
 
 	private static Color[] REFLECTIVITY_PALETTE = new Color[] {
 			new Color(0.25f, 0.25f, 0.25f, 200.0f / 255.0f),
@@ -112,6 +115,10 @@ public class RadarView extends GLSurfaceView implements GLSurfaceView.Renderer, 
 		mForeground.remove(layer);
 	}
 	
+	public synchronized void setViewpointListener(ViewpointListener listener) {
+		mViewpointListener = listener;
+	}
+	
 	@Override
 	public void scale(float factor) {
 		Matrix.setIdentityM(mTransform, 16);
@@ -124,6 +131,27 @@ public class RadarView extends GLSurfaceView implements GLSurfaceView.Renderer, 
 		Matrix.setIdentityM(mTransform, 16);
 		Matrix.translateM(mTransform, 16, dx, dy, 0.0f);
 		Matrix.multiplyMM(mTransform, 0, mTransform, 16, mTransform, 0);
+	}
+	
+	@Override
+	public void onTouchUpdate() {
+		updateViewpoint();
+	}
+	
+	private void updateViewpoint() {
+		if (!Matrix.invertM(mTransform, 16, mTransform, 0))
+			return;
+
+		float vect[] = new float[4];
+		vect[3] = 1.0f;
+		Matrix.multiplyMV(vect, 0, mTransform, 16, vect, 0);
+
+		LatLon center = new LatLon(mData.description.lat, mData.description.lon);
+		LatLon viewpoint = LatLon.unproject(new Point2D(vect[0], vect[1]), center, null);
+		
+		if (mViewpointListener != null) {
+			mViewpointListener.onViewpointChanged(viewpoint);
+		}
 	}
 	
 	public synchronized void setLocation(LatLon pos) {

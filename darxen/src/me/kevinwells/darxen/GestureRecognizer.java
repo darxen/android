@@ -72,6 +72,7 @@ public class GestureRecognizer {
     		float dx = (e.getX() - prev.x) / scaleFactor;
     		float dy = -(e.getY() - prev.y) / scaleFactor;
     		mSurface.translate(dx, dy);
+    		mSurface.onTouchUpdate();
     		return true;
 		}
 	}
@@ -130,6 +131,8 @@ public class GestureRecognizer {
 			mSurface.translate((float)-currCenter.x, (float)currCenter.y);
 			mSurface.scale((float)scale);
 			mSurface.translate((float)currCenter.x, (float)-currCenter.y);
+			
+			mSurface.onTouchUpdate();
 			
 			return true;
 		}

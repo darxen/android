@@ -505,7 +505,17 @@ public class MapActivity extends SherlockFragmentActivity {
     
     private void loadShapefile(int index, LatLon center, ShapefileConfig config, ShapefileRenderData data) {
     	Bundle args = LoadShapefile.bundleArgs(center, config, data);
-    	getSupportLoaderManager().initLoader(TASK_LOAD_SHAPEFILES + index, args, mTaskLoadShapefilesCallbacks);
+    	int id = TASK_LOAD_SHAPEFILES + index;
+    	LoadShapefile loader;
+    	loader = LoadShapefile.castInstance(getSupportLoaderManager().initLoader(id, args, mTaskLoadShapefilesCallbacks));
+    	loader.setUpdateThrottle(100);
+    	
+    	mRadarView.setViewpointListener(new ViewpointListener() {
+			@Override
+			public void onViewpointChanged(LatLon viewpoint) {
+				reloadShapefiles(viewpoint);
+			}
+		});
     }
     
 	private static class LoadShapefile extends CachedAsyncLoader<ShapefileRenderData> {
@@ -538,6 +548,10 @@ public class MapActivity extends SherlockFragmentActivity {
 		public static LoadShapefile getInstance(LoaderManager manager, int id) {
 			Loader<ShapefileRenderData> res = manager.getLoader(id);
 			return (LoadShapefile)res;
+		}
+		
+		public static LoadShapefile castInstance(Loader<ShapefileRenderData> loader) {
+			return (LoadShapefile)loader;
 		}
 	
 		private LoadShapefile(Context context, LatLon center, ShapefileConfig config, ShapefileRenderData data) {
