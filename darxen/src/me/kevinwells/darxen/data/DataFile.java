@@ -21,5 +21,17 @@ public class DataFile {
 		
 		return res;
 	}
+	
+	public boolean equals(DataFile other) {
+		return header == other.header;
+	}
+	
+	@Override
+	public boolean equals(Object other) {
+		if (other instanceof DataFile)
+			return equals((DataFile)other);
+		
+		return false;
+	}
 
 }

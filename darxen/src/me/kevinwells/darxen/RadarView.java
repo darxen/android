@@ -33,11 +33,12 @@ public class RadarView extends GLSurfaceView implements GLSurfaceView.Renderer, 
 	private int[] mRadialSize = new int[16];
 	
 	private List<Renderable> mBackground;
+	private List<Renderable> mForeground;
 
 	private static Color[] REFLECTIVITY_PALETTE = new Color[] {
-			new Color(50.0f / 255.0f, 50.0f / 255.0f, 50.0f / 255.0f),
-			new Color(16.0f / 255.0f, 16.0f / 255.0f, 16.0f / 255.0f),
-			new Color(33.0f / 255.0f, 33.0f / 255.0f, 33.0f / 255.0f),
+			new Color(0.25f, 0.25f, 0.25f, 200.0f / 255.0f),
+			new Color(0.25f, 0.25f, 0.25f, 64.0f / 255.0f),
+			new Color(0.25f, 0.25f, 0.25f, 132.0f / 255.0f),
 			new Color(40.0f / 255.0f, 126.0f / 255.0f, 40.0f / 255.0f),
 			new Color(60.0f / 255.0f, 160.0f / 255.0f, 20.0f / 255.0f),
 			new Color(120.0f / 255.0f, 220.0f / 255.0f, 20.0f / 255.0f),
@@ -53,10 +54,10 @@ public class RadarView extends GLSurfaceView implements GLSurfaceView.Renderer, 
 			new Color(255.0f / 255.0f, 255.0f / 255.0f, 255.0f / 255.0f) };
 
 	private static Color[] CLEANAIR_PALETTE = new Color[] {
-			new Color(50.0f / 255.0f, 50.0f / 255.0f, 50.0f / 255.0f),
-			new Color(30.0f / 255.0f, 30.0f / 255.0f, 30.0f / 255.0f),
-			new Color(40.0f / 255.0f, 40.0f / 255.0f, 40.0f / 255.0f),
-			new Color(50.0f / 255.0f, 50.0f / 255.0f, 50.0f / 255.0f),
+			new Color(0.25f, 0.25f, 0.25f, 200.0f / 255.0f),
+			new Color(0.25f, 0.25f, 0.25f, 120.0f / 255.0f),
+			new Color(0.25f, 0.25f, 0.25f, 160.0f / 255.0f),
+			new Color(0.25f, 0.25f, 0.25f, 200.0f / 255.0f),
 			new Color(60.0f / 255.0f, 160.0f / 255.0f, 20.0f / 255.0f),
 			new Color(70.0f / 255.0f, 70.0f / 255.0f, 70.0f / 255.0f),
 			new Color(80.0f / 255.0f, 80.0f / 255.0f, 80.0f / 255.0f),
@@ -73,6 +74,7 @@ public class RadarView extends GLSurfaceView implements GLSurfaceView.Renderer, 
 	public RadarView(Context context) {
 		super(context);
 		mBackground = new ArrayList<Renderable>();
+		mForeground = new ArrayList<Renderable>();
 		
 		//setEGLContextClientVersion(2);
 		setRenderer(this);
@@ -94,12 +96,20 @@ public class RadarView extends GLSurfaceView implements GLSurfaceView.Renderer, 
 		updateLocation();
 	}
 	
-	public synchronized void addLayer(Renderable layer) {
+	public synchronized void addUnderlay(Renderable layer) {
 		mBackground.add(layer);
 	}
 	
-	public synchronized void removeLayer(Renderable layer) {
+	public synchronized void removeUnderlay(Renderable layer) {
 		mBackground.remove(layer);
+	}
+	
+	public synchronized void addOverlay(Renderable layer) {
+		mForeground.add(layer);
+	}
+	
+	public synchronized void removeOverlay(Renderable layer) {
+		mForeground.remove(layer);
 	}
 	
 	@Override
@@ -145,7 +155,7 @@ public class RadarView extends GLSurfaceView implements GLSurfaceView.Renderer, 
 	@Override
 	public synchronized void onDrawFrame(GL10 gl) {
 		
-		gl.glClear(GL10.GL_COLOR_BUFFER_BIT | GL10.GL_DEPTH_BUFFER_BIT);
+		gl.glClear(GL10.GL_COLOR_BUFFER_BIT);
 		gl.glLoadIdentity();
 		gl.glMultMatrixf(mTransform, 0);
 		
@@ -153,6 +163,7 @@ public class RadarView extends GLSurfaceView implements GLSurfaceView.Renderer, 
 			renderable.render(gl);
 		}
 		
+		gl.glEnable(GL10.GL_BLEND);
 		if (mData != null) {
 			RadialDataPacket packet = (RadialDataPacket)mData.description.symbologyBlock.packets[0];
 	
@@ -161,6 +172,12 @@ public class RadarView extends GLSurfaceView implements GLSurfaceView.Renderer, 
 				palette = REFLECTIVITY_PALETTE;
 			renderRadialData(gl, packet, palette);
 		}
+		
+		for (Renderable renderable : mForeground) {
+			renderable.render(gl);
+		}
+		
+		//TODO render legend
 		
 		if (mPosBuf != null) {
 			gl.glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
@@ -190,8 +207,17 @@ public class RadarView extends GLSurfaceView implements GLSurfaceView.Renderer, 
 	@Override
 	public void onSurfaceCreated(GL10 gl, EGLConfig config) {
 		gl.glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-		
+
 		gl.glEnableClientState(GL10.GL_VERTEX_ARRAY);
+		
+		gl.glDisable(GL10.GL_LIGHTING);
+		gl.glDisable(GL10.GL_DEPTH_TEST);
+		
+		gl.glEnable(GL10.GL_BLEND);
+		gl.glBlendFunc(GL10.GL_SRC_ALPHA, GL10.GL_ONE_MINUS_SRC_ALPHA);
+		
+		gl.glDisable(GL10.GL_COLOR_MATERIAL);
+		gl.glTexEnvx(GL10.GL_TEXTURE_ENV, GL10.GL_TEXTURE_ENV_MODE, GL10.GL_MODULATE);
 	}
 	
 	private void renderRadialData(GL10 gl, RadialDataPacket packet, Color[] palette) {
@@ -244,7 +270,7 @@ public class RadarView extends GLSurfaceView implements GLSurfaceView.Renderer, 
 			}
 			
 			Color c = palette[i];
-			gl.glColor4f(c.r, c.g, c.b, 1.0f);
+			gl.glColor4f(c.r, c.g, c.b, c.a);
 			FloatBuffer buf = mRadialBuffers[i];
 			gl.glVertexPointer(2, GL10.GL_FLOAT, 0, buf);
 			gl.glDrawArrays(GL10.GL_TRIANGLES, 0, mRadialSize[i]);

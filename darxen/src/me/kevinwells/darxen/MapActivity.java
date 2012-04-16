@@ -470,8 +470,9 @@ public class MapActivity extends SherlockFragmentActivity {
     	{
         	//states
     		ShapefileConfig config = new ShapefileConfig(R.raw.states_shp, R.raw.states_dbf, R.raw.states_shx);
-    		ShapefileRenderConfig renderConfig = new ShapefileRenderConfig(new Color(1.0f, 1.0f, 1.0f), 3.0f, GL10.GL_LINE_STRIP);
-    		mShapefiles.add(new ShapefileInfo(config, renderConfig));
+    		ShapefileRenderConfig underRenderConfig = new ShapefileRenderConfig(new Color(1.0f, 1.0f, 1.0f), 3.0f, GL10.GL_LINE_STRIP);
+    		ShapefileRenderConfig overRenderConfig = new ShapefileRenderConfig(new Color(1.0f, 1.0f, 1.0f, 0.4f), 3.0f, GL10.GL_LINE_STRIP);
+    		mShapefiles.add(new ShapefileInfo(config, underRenderConfig, overRenderConfig));
     	}
     	
     	//froyo can't read resources >1MB, like county lines
@@ -479,8 +480,9 @@ public class MapActivity extends SherlockFragmentActivity {
     	{
         	//counties
     		ShapefileConfig config = new ShapefileConfig(R.raw.counties_shp, R.raw.counties_dbf, R.raw.counties_shx);
-    		ShapefileRenderConfig renderConfig = new ShapefileRenderConfig(new Color(0.75f, 0.75f, 0.75f), 1.0f, GL10.GL_LINE_STRIP);
-    		mShapefiles.add(new ShapefileInfo(config, renderConfig));
+    		ShapefileRenderConfig underRenderConfig = new ShapefileRenderConfig(new Color(0.75f, 0.75f, 0.75f), 1.0f, GL10.GL_LINE_STRIP);
+    		ShapefileRenderConfig overRenderConfig = new ShapefileRenderConfig(new Color(0.75f, 0.75f, 0.75f, 0.4f), 1.0f, GL10.GL_LINE_STRIP);
+    		mShapefiles.add(new ShapefileInfo(config, underRenderConfig, overRenderConfig));
     	}
     	
     	for (int i = 0; i < mShapefiles.size(); i++) {
@@ -654,12 +656,20 @@ public class MapActivity extends SherlockFragmentActivity {
 			int index = loader.getId() - TASK_LOAD_SHAPEFILES;
 			ShapefileInfo info = mShapefiles.get(index);
 			
-			if (info.mRenderable == null) {
-				LinearShapefileRenderable renderable = new LinearShapefileRenderable(data, info.mRenderConfig);
-				mRadarView.addLayer(renderable);
-				info.mRenderable = renderable;
+			if (info.mUnderlay == null && info.mOverlay == null) {
+				LinearShapefileRenderable underlay = new LinearShapefileRenderable(data, info.mUnderlayRenderConfig);
+				LinearShapefileRenderable overlay = new LinearShapefileRenderable(data, info.mOverlayRenderConfig);
+				mRadarView.addUnderlay(underlay);
+				mRadarView.addOverlay(overlay);
+				info.mUnderlay = underlay;
+				info.mOverlay = overlay;
 			} else {
-				info.mRenderable.setData(data);
+				if (info.mUnderlay != null) {
+					info.mUnderlay.setData(data);
+				}
+				if (info.mOverlay != null) {
+					info.mOverlay.setData(data);
+				}
 			}
 			setSupportProgressBarIndeterminateVisibility(false);
 		}
@@ -668,19 +678,23 @@ public class MapActivity extends SherlockFragmentActivity {
 			int index = loader.getId() - TASK_LOAD_SHAPEFILES;
 			ShapefileInfo info = mShapefiles.get(index);
 			
-			mRadarView.removeLayer(info.mRenderable);
+			mRadarView.removeUnderlay(info.mUnderlay);
+			mRadarView.removeUnderlay(info.mOverlay);
 		}
     };
 
     private class ShapefileInfo
     {
     	public ShapefileConfig mConfig;
-    	public ShapefileRenderConfig mRenderConfig;
-    	public LinearShapefileRenderable mRenderable;
+    	public ShapefileRenderConfig mUnderlayRenderConfig;
+    	public ShapefileRenderConfig mOverlayRenderConfig;
+    	public LinearShapefileRenderable mUnderlay;
+    	public LinearShapefileRenderable mOverlay;
 		
-    	public ShapefileInfo(ShapefileConfig config, ShapefileRenderConfig renderConfig) {
+    	public ShapefileInfo(ShapefileConfig config, ShapefileRenderConfig underRenderConfig, ShapefileRenderConfig overRenderConfig) {
 			this.mConfig = config;
-			this.mRenderConfig = renderConfig;
+			this.mUnderlayRenderConfig = underRenderConfig;
+			this.mOverlayRenderConfig = overRenderConfig;
 		}
     }
 }
