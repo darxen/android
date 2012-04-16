@@ -465,6 +465,13 @@ public class MapActivity extends SherlockFragmentActivity {
     
     private void loadShapefiles(LatLon center) {
     	mLayersLoaded = true;
+    	
+    	if (mShapefiles != null) {
+    		for (ShapefileInfo info : mShapefiles) {
+				mRadarView.removeUnderlay(info.mUnderlay);
+				mRadarView.removeOverlay(info.mOverlay);
+			}
+    	}
 	
     	mShapefiles = new ArrayList<ShapefileInfo>();
     	{
@@ -489,6 +496,14 @@ public class MapActivity extends SherlockFragmentActivity {
     		ShapefileInfo info = mShapefiles.get(i);
     		
     		ShapefileRenderData model = new ShapefileRenderData();
+    		
+    		LinearShapefileRenderable underlay = new LinearShapefileRenderable(model, info.mUnderlayRenderConfig);
+    		LinearShapefileRenderable overlay = new LinearShapefileRenderable(model, info.mOverlayRenderConfig);
+    		mRadarView.addUnderlay(underlay);
+    		mRadarView.addOverlay(overlay);
+    		info.mUnderlay = underlay;
+    		info.mOverlay = overlay;
+    		
 			loadShapefile(i, center, info.mConfig, model);
 		}
     }
@@ -515,7 +530,7 @@ public class MapActivity extends SherlockFragmentActivity {
 			public void onViewpointChanged(LatLon viewpoint) {
 				reloadShapefiles(viewpoint);
 			}
-		});
+		});    	
     }
     
 	private static class LoadShapefile extends CachedAsyncLoader<ShapefileRenderData> {
@@ -669,22 +684,14 @@ public class MapActivity extends SherlockFragmentActivity {
 		public void onLoadFinished(Loader<ShapefileRenderData> loader, ShapefileRenderData data) {
 			int index = loader.getId() - TASK_LOAD_SHAPEFILES;
 			ShapefileInfo info = mShapefiles.get(index);
-			
-			if (info.mUnderlay == null && info.mOverlay == null) {
-				LinearShapefileRenderable underlay = new LinearShapefileRenderable(data, info.mUnderlayRenderConfig);
-				LinearShapefileRenderable overlay = new LinearShapefileRenderable(data, info.mOverlayRenderConfig);
-				mRadarView.addUnderlay(underlay);
-				mRadarView.addOverlay(overlay);
-				info.mUnderlay = underlay;
-				info.mOverlay = overlay;
-			} else {
-				if (info.mUnderlay != null) {
-					info.mUnderlay.setData(data);
-				}
-				if (info.mOverlay != null) {
-					info.mOverlay.setData(data);
-				}
+
+			if (info.mUnderlay != null) {
+				info.mUnderlay.setData(data);
 			}
+			if (info.mOverlay != null) {
+				info.mOverlay.setData(data);
+			}
+			
 			setSupportProgressBarIndeterminateVisibility(false);
 		}
 		@Override
