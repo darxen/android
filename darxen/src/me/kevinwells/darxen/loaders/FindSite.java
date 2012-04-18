@@ -34,9 +34,17 @@ public class FindSite extends CachedAsyncLoader<RadarSite> {
 		mRadarSites = radarSites;
 		mPosition = position;
 	}
+	
+	private static final String STATIC_SITE = null;
 
 	@Override
 	protected RadarSite doInBackground() {
+		if (STATIC_SITE != null) {
+			for (int i = 0; i < mRadarSites.size(); i++)
+				if (mRadarSites.get(i).name.equals(STATIC_SITE))
+					return mRadarSites.get(i);
+		}
+		
 		double[] distances = new double[mRadarSites.size()];
 		
 		for (int i = 0; i < mRadarSites.size(); i++)

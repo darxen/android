@@ -115,7 +115,7 @@ public class MapActivity extends SherlockFragmentActivity {
 		
 		setSupportProgressBarIndeterminateVisibility(true);
 		
-		loadRadar();
+		reloadRadar();
 	}
 	
 	private void updateLocation(Location location) {
@@ -242,8 +242,8 @@ public class MapActivity extends SherlockFragmentActivity {
 		public void onLoadFinished(Loader<RadarSite> loader, RadarSite radarSite) {
 			mRadarSite = radarSite;
 			mRadarView.setCenter(mRadarSite.center);
-			update();
-
+			
+			loadRadar();
 	        loadShapefiles(radarSite.center);
 		}
 		@Override
@@ -254,7 +254,12 @@ public class MapActivity extends SherlockFragmentActivity {
 
 	private void loadRadar() {
 		Bundle args = LoadRadar.bundleArgs(mRadarSite);
-		getSupportLoaderManager().initLoader(TASK_LOAD_RADAR, args, mTaskLoadRadarCallbacks).startLoading();
+		getSupportLoaderManager().initLoader(TASK_LOAD_RADAR, args, mTaskLoadRadarCallbacks);
+	}
+	
+	private void reloadRadar() {
+		Bundle args = LoadRadar.bundleArgs(mRadarSite);
+		getSupportLoaderManager().restartLoader(TASK_LOAD_RADAR, args, mTaskLoadRadarCallbacks);
 	}
 	
     private LoaderManager.LoaderCallbacks<DataFile> mTaskLoadRadarCallbacks =

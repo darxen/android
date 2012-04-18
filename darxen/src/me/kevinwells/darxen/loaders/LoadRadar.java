@@ -17,6 +17,8 @@ import org.apache.commons.net.ftp.FTPReply;
 
 import android.content.Context;
 import android.os.Bundle;
+import android.support.v4.app.LoaderManager;
+import android.support.v4.content.Loader;
 import android.util.Log;
 
 public class LoadRadar extends CachedAsyncLoader<DataFile> {
@@ -32,6 +34,11 @@ public class LoadRadar extends CachedAsyncLoader<DataFile> {
 	public static LoadRadar createInstance(Context context, Bundle args) {
 		RadarSite radarSite = args.getParcelable(ARG_RADAR_SITE);
 		return new LoadRadar(context, radarSite);
+	}
+	
+	public static LoadRadar getInstance(LoaderManager manager, int id) {
+		Loader<DataFile> res = manager.getLoader(id);
+		return (LoadRadar)res;
 	}
 	
 	private RadarSite mRadarSite;

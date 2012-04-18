@@ -12,6 +12,8 @@ import me.kevinwells.darxen.model.PaletteType;
 import me.kevinwells.darxen.model.RadarRenderData;
 import android.content.Context;
 import android.os.Bundle;
+import android.support.v4.app.LoaderManager;
+import android.support.v4.content.Loader;
 
 public class RenderRadar extends CachedAsyncLoader<RadarRenderData> {
 
@@ -30,6 +32,11 @@ public class RenderRadar extends CachedAsyncLoader<RadarRenderData> {
 		RadarRenderData data = args.getParcelable(ARG_DATA);
 		return new RenderRadar(context, file, data);
 	}
+
+	public static RenderRadar getInstance(LoaderManager manager, int id) {
+		Loader<RadarRenderData> res = manager.getLoader(id);
+		return (RenderRadar)res;
+	}
 	
 	private DataFile mFile;
 	private RadarRenderData mData;
@@ -44,6 +51,11 @@ public class RenderRadar extends CachedAsyncLoader<RadarRenderData> {
 	protected RadarRenderData doInBackground() {
 		
 		Thread.currentThread().setPriority(Thread.NORM_PRIORITY+2);
+		
+		if (mFile == null) {
+			mData.clear();
+			return mData;
+		}
 		
 		if (mData.getPalette() == null) {
 			Palette palette;

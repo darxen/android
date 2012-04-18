@@ -63,20 +63,23 @@ public class RadarView extends GLSurfaceView implements GLSurfaceView.Renderer, 
 		scale(1.0f/230.0f);
 	}
 
-	public synchronized void setData(DataFile file) {
+	public synchronized void setData(DataFile data) {
 		if (mData == null) {
 			//set the initial transform
 			Matrix.setIdentityM(mTransform, 0);
-			RadialDataPacket packet = (RadialDataPacket)file.description.symbologyBlock.packets[0];
+			RadialDataPacket packet = (RadialDataPacket)data.description.symbologyBlock.packets[0];
 			scale(1.0f/packet.rangeBinCount);
 		}
 		
-		mData = file;
-		mRadar = null;
-		
-		if (file != null) {
+		if (mData == null) {
+			mData = data;
 			loadRadar();
 			loadLegend();
+			
+		} else {
+			mData = data;
+			reloadRadar();
+			reloadLegend();
 		}
 		
 		updateLocation();
@@ -153,6 +156,8 @@ public class RadarView extends GLSurfaceView implements GLSurfaceView.Renderer, 
 			mPosBuf = null;
 			return;
 		}
+		
+		//TODO loader, and a better position marker
 		
 		mPosBuf = Buffers.allocateFloat(2);
 
@@ -267,6 +272,15 @@ public class RadarView extends GLSurfaceView implements GLSurfaceView.Renderer, 
 		mLoaderManager.initLoader(TASK_RENDER_RADAR, args, mTaskLoadRadarCallbacks);
 	}
 	
+	private void reloadRadar() {
+		RadarRenderData renderData = new RadarRenderData();
+		if (mRadar == null) {
+			mRadar = new RadarRenderable(renderData);
+		}
+		Bundle args = RenderRadar.bundleArgs(mData, renderData);
+		mLoaderManager.restartLoader(TASK_RENDER_RADAR, args, mTaskLoadRadarCallbacks);
+	}
+	
     private LoaderManager.LoaderCallbacks<RadarRenderData> mTaskLoadRadarCallbacks =
     		new LoaderManager.LoaderCallbacks<RadarRenderData>() {
 		@Override
@@ -279,7 +293,7 @@ public class RadarView extends GLSurfaceView implements GLSurfaceView.Renderer, 
 		}
 		@Override
 		public void onLoaderReset(Loader<RadarRenderData> loader) {
-			mRadar.setData(null);
+			mRadar.setData(new RadarRenderData());
 		}
     };
 	
@@ -290,6 +304,15 @@ public class RadarView extends GLSurfaceView implements GLSurfaceView.Renderer, 
 		}
 		Bundle args = RenderLegend.bundleArgs(mData, renderData);
 		mLoaderManager.initLoader(TASK_RENDER_LEGEND, args, mTaskLoadLegendCallbacks);
+	}
+	
+	private void reloadLegend() {
+		LegendRenderData renderData = new LegendRenderData();
+		if (mLegend == null) {
+			mLegend = new LegendRenderable(renderData);
+		}
+		Bundle args = RenderLegend.bundleArgs(mData, renderData);
+		mLoaderManager.restartLoader(TASK_RENDER_LEGEND, args, mTaskLoadLegendCallbacks);
 	}
 	
     private LoaderManager.LoaderCallbacks<LegendRenderData> mTaskLoadLegendCallbacks =
@@ -304,7 +327,7 @@ public class RadarView extends GLSurfaceView implements GLSurfaceView.Renderer, 
 		}
 		@Override
 		public void onLoaderReset(Loader<LegendRenderData> loader) {
-			mLegend.setData(null);
+			mLegend.setData(new LegendRenderData());
 		}
     };
 }

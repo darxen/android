@@ -32,6 +32,13 @@ public class RadarRenderData implements Parcelable {
 	public int getCount(int i) {
 		return mRadialSize[i];
 	}
+	
+	public synchronized void clear() {
+		for (int i = 0; i < 16; i++) {
+			mRadialBuffers[i] = null;
+			mRadialSize[i] = 0;
+		}
+	}
 
 	public synchronized void setBuffers(FloatBuffer[] radialBuffers, int[] radialSizes) {
 		assert(radialBuffers.length == 16);
