@@ -24,6 +24,8 @@ public class RadarView extends GLSurfaceView implements GLSurfaceView.Renderer, 
 	private LatLon mPos;
 	private FloatBuffer mPosBuf;
 	
+	private LatLon mCenter;
+	
 	private GestureRecognizer mRecognizer = new GestureRecognizer(this);
 
 	private float[] mTransform = new float[32];
@@ -43,6 +45,7 @@ public class RadarView extends GLSurfaceView implements GLSurfaceView.Renderer, 
 		//setEGLContextClientVersion(2);
 		setRenderer(this);
 		Matrix.setIdentityM(mTransform, 0);
+		scale(1.0f/230.0f);
 	}
 
 	public synchronized void setData(DataFile file) {
@@ -61,6 +64,10 @@ public class RadarView extends GLSurfaceView implements GLSurfaceView.Renderer, 
 		}
 		
 		updateLocation();
+	}
+	
+	public synchronized void setCenter(LatLon center) {
+		mCenter = center;
 	}
 	
 	public synchronized void addUnderlay(Renderable layer) {
@@ -105,13 +112,15 @@ public class RadarView extends GLSurfaceView implements GLSurfaceView.Renderer, 
 	private void updateViewpoint() {
 		if (!Matrix.invertM(mTransform, 16, mTransform, 0))
 			return;
+		
+		if (mCenter == null)
+			return;
 
 		float vect[] = new float[4];
 		vect[3] = 1.0f;
 		Matrix.multiplyMV(vect, 0, mTransform, 16, vect, 0);
 
-		LatLon center = new LatLon(mData.description.lat, mData.description.lon);
-		LatLon viewpoint = LatLon.unproject(new Point2D(vect[0], vect[1]), center, null);
+		LatLon viewpoint = LatLon.unproject(new Point2D(vect[0], vect[1]), mCenter, null);
 		
 		if (mViewpointListener != null) {
 			mViewpointListener.onViewpointChanged(viewpoint);

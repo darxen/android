@@ -48,8 +48,6 @@ public class MapActivity extends SherlockFragmentActivity {
     private LatLon mPosition;
     private ArrayList<RadarSite> mRadarSites;
 	
-    private boolean mLayersLoaded;
-    
     private RadarSite mRadarSite;
     
     private static final int TASK_LOAD_SITES = 0;
@@ -96,9 +94,6 @@ public class MapActivity extends SherlockFragmentActivity {
 		switch (item.getItemId()) {
 		case R.id.refresh:
 			update();
-			//mRadarSite.center.lat -= 0.6;
-			//mRadarSite.center.lon -= 0.6;
-			//reloadShapefiles(mRadarSite.center);
 			break;
 		default:
 			return false;
@@ -243,7 +238,10 @@ public class MapActivity extends SherlockFragmentActivity {
 		@Override
 		public void onLoadFinished(Loader<RadarSite> loader, RadarSite radarSite) {
 			mRadarSite = radarSite;
+			mRadarView.setCenter(mRadarSite.center);
 			update();
+
+	        loadShapefiles(radarSite.center);
 		}
 		@Override
 		public void onLoaderReset(Loader<RadarSite> loader) {
@@ -271,16 +269,10 @@ public class MapActivity extends SherlockFragmentActivity {
 
 	        mTitle.setText(new String(data.header).replace("\n", ""));
 			
-	        if (!mLayersLoaded) {
-	        	loadShapefiles(new LatLon(data.description.lat, data.description.lon));
-	        }
-			
 			mRadarView.setData(data);
 			
-			if (mLayersLoaded) {
-				setSupportProgressBarIndeterminateVisibility(false);
-			}
-
+			setSupportProgressBarIndeterminateVisibility(false);
+			
 			Prefs.setLastUpdateTime(new Date());
 		}
 		@Override
@@ -290,8 +282,6 @@ public class MapActivity extends SherlockFragmentActivity {
     };
     
     private void loadShapefiles(LatLon center) {
-    	mLayersLoaded = true;
-    	
     	if (mShapefiles != null) {
     		for (ShapefileInfo info : mShapefiles) {
 				mRadarView.removeUnderlay(info.mUnderlay);
@@ -376,8 +366,6 @@ public class MapActivity extends SherlockFragmentActivity {
 			if (info.mOverlay != null) {
 				info.mOverlay.setData(data);
 			}
-			
-			setSupportProgressBarIndeterminateVisibility(false);
 		}
 		@Override
 		public void onLoaderReset(Loader<ShapefileRenderData> loader) {
