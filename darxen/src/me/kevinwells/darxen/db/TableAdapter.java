@@ -67,6 +67,7 @@ public abstract class TableAdapter {
 		assert (cursor.getColumnCount() == 1);
 		assert (cursor.getCount() == 1);
 		cursor.moveToFirst();
+		cursor.close();
 		return cursor.getString(0);
 	}
 
@@ -80,6 +81,7 @@ public abstract class TableAdapter {
 	protected boolean getBoolean(Cursor cursor, int column) {
 		int val = cursor.getInt(column);
 		assert (val == 0 || val == 1);
+		cursor.close();
 		return val == 1;
 	}
 }

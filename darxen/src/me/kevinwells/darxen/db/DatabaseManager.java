@@ -30,7 +30,14 @@ public class DatabaseManager extends SQLiteOpenHelper {
 		return instance;
 	}
 
-	private static final int DATABASE_VERSION = 2;
+	private static final int DATABASE_VERSION = 5;
+	
+	private static final String TABLE_SHAPEFILE_STATUS = "ShapefileStatus";
+	private static final String CREATE_TABLE_SHAPEFILE_STATUS =
+			"CREATE TABLE " + TABLE_SHAPEFILE_STATUS + " " +
+				"( Shapefile INTEGER PRIMARY KEY" +
+				", Cached INTEGER NOT NULL" +
+				");";
 	
 	private static final String TABLE_SHAPEFILE_OBJECTS = "ShapefileObjects";
 	private static final String CREATE_TABLE_SHAPEFILE_OBJECTS =
@@ -50,12 +57,14 @@ public class DatabaseManager extends SQLiteOpenHelper {
 
 	@Override
 	public void onCreate(SQLiteDatabase db) {
+		db.execSQL(CREATE_TABLE_SHAPEFILE_STATUS);
 		db.execSQL(CREATE_TABLE_SHAPEFILE_OBJECTS);
 	}
 
 	@Override
 	public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
 		db.execSQL("DROP TABLE IF EXISTS " + TABLE_SHAPEFILE_OBJECTS);
+		db.execSQL("DROP TABLE IF EXISTS " + TABLE_SHAPEFILE_STATUS);
 		
 		onCreate(db);
 	}

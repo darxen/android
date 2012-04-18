@@ -5,6 +5,7 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 
+import me.kevinwells.darxen.C;
 import me.kevinwells.darxen.LatLon;
 import me.kevinwells.darxen.Point2D;
 import me.kevinwells.darxen.ShapefileObjectPartRenderData;
@@ -22,6 +23,7 @@ import android.content.res.Resources;
 import android.os.Bundle;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.Loader;
+import android.util.Log;
 
 public class LoadShapefile extends CachedAsyncLoader<ShapefileRenderData> {
 	
@@ -88,7 +90,7 @@ public class LoadShapefile extends CachedAsyncLoader<ShapefileRenderData> {
 		buildCache();
 
 		ShapefileObjectsAdapter adapter = new ShapefileObjectsAdapter();
-		
+
 		LatLon viewpoint = getViewpoint();
 
 		ShapefileObjectBounds bounds;
@@ -153,6 +155,9 @@ public class LoadShapefile extends CachedAsyncLoader<ShapefileRenderData> {
 			return;
 		}
 		
+		Log.i(C.TAG, "Building cache for shapefile " + mConfig.id);
+		adapter.purgeCache(mConfig.id);
+		
 		Resources resources = getContext().getResources();
 		
 		InputStream fShp = resources.openRawResource(mConfig.resShp);
@@ -169,6 +174,8 @@ public class LoadShapefile extends CachedAsyncLoader<ShapefileRenderData> {
 				adapter.addBounds(mConfig.id, i, bounds);
 				obj.close();
 			}
+			
+			adapter.setIsCached(mConfig.id);
 		
 			adapter.commitTransaction();
 		} finally {

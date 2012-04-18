@@ -17,18 +17,40 @@ public class ShapefileObjectsAdapter extends TableAdapter {
 	public static final String KEY_Y_MIN = "YMin";
 	public static final String KEY_Y_MAX = "YMax";
 	
+	private ShapefileStatusAdapter mStatusAdapter;
+	
+	@Override
+	public void open() {
+		super.open();
+		mStatusAdapter = new ShapefileStatusAdapter(db);
+	}
+	
+	@Override
+	public void close() {
+		mStatusAdapter = null;
+		super.close();
+	}
+	
 	public boolean hasCache(ShapefileId shapefile) {
-		//FIXME use a separate table with bits marking a shapefile as cached
-		String projection[] = {KEY_ID};
-		String args[] = {String.valueOf(shapefile.ordinal())};
-		Cursor cursor;
-		cursor = db.query(TABLE_NAME, projection, KEY_SHAPEFILE+"=?", args, null, null, null);
-		return cursor.getCount() >= 1;
+		return mStatusAdapter.hasCache(shapefile);
 	}
 	
 	public void purgeCache(ShapefileId shapefile) {
-		String args[] = {String.valueOf(shapefile.ordinal())};
-		db.delete(TABLE_NAME, KEY_SHAPEFILE+"=?", args);
+		startTransaction();
+		try {
+			String args[] = {String.valueOf(shapefile.ordinal())};
+			db.delete(TABLE_NAME, KEY_SHAPEFILE+"=?", args);
+			
+			mStatusAdapter.setIsCached(shapefile, false);
+			
+			commitTransaction();
+		} finally {
+			finishTransaction();
+		}
+	}
+	
+	public void setIsCached(ShapefileId shapefile) {
+		mStatusAdapter.setIsCached(shapefile, true);
 	}
 	
 	public void addBounds(ShapefileId shapefile, int index, ShapefileObjectBounds bounds) {

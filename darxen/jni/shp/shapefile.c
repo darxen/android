@@ -39,7 +39,7 @@ void Java_me_kevinwells_darxen_shp_Shapefile_init(JNIEnv* env, jobject this, job
 	addInputStream(id, (*env)->NewGlobalRef(env, fShx), TYPE_SHX);
 	setInt(env, this, "mInputId", id);
 
-    log_debug("Opening shapefile: %s", shpPath);
+    //log_debug("Opening shapefile: %s", shpPath);
 
 	SHPHandle hShp = SHPOpenLL(shpPath, "rb", getInputStreamHooks());
 	if (!hShp)
@@ -56,7 +56,7 @@ void Java_me_kevinwells_darxen_shp_Shapefile_init(JNIEnv* env, jobject this, job
 
 void Java_me_kevinwells_darxen_shp_Shapefile_close(JNIEnv* env, jobject this)
 {
-    log_debug("Closing shapefile");
+    //log_debug("Closing shapefile");
 
 	int id = getInt(env, this, "mInputId");
 	SHPHandle hShp = getShapeHandle(env, this);

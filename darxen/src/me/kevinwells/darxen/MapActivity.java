@@ -75,6 +75,7 @@ public class MapActivity extends SherlockFragmentActivity {
         mTitle = (TextView)findViewById(R.id.title);
         
         Prefs.unsetLastUpdateTime();
+        //LoaderManager.enableDebugLogging(true);
         
         //TODO load cached site from shared prefs
         loadSites();
