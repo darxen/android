@@ -1,5 +1,6 @@
 package me.kevinwells.darxen;
 
+import me.kevinwells.darxen.db.DatabaseManager;
 import android.app.Application;
 
 public class MyApplication extends Application {
@@ -13,6 +14,6 @@ public class MyApplication extends Application {
 	@Override
 	public void onCreate() {
 		instance = this;
-		super.onCreate();
+		DatabaseManager.createInstance(getApplicationContext());
 	}
 }

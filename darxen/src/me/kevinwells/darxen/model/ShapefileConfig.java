@@ -1,4 +1,4 @@
-package me.kevinwells.darxen;
+package me.kevinwells.darxen.model;
 
 import android.os.Parcel;
 import android.os.Parcelable;
@@ -7,11 +7,13 @@ public class ShapefileConfig implements Parcelable {
 	public int resShp;
 	public int resShx;
 	public int resDbf;
+	public ShapefileId id;
 
-	public ShapefileConfig(int resShp, int resDbf, int resShx) {
+	public ShapefileConfig(int resShp, int resDbf, int resShx, ShapefileId id) {
 		this.resShp = resShp;
 		this.resDbf = resDbf;
 		this.resShx = resShx;
+		this.id = id;
 	}
 
 	@Override
@@ -24,12 +26,14 @@ public class ShapefileConfig implements Parcelable {
 		dest.writeInt(resShp);
 		dest.writeInt(resShx);
 		dest.writeInt(resDbf);
+		dest.writeInt(id.ordinal());
 	}
 	
 	public ShapefileConfig(Parcel in) {
 		resShp = in.readInt();
 		resShx = in.readInt();
 		resDbf = in.readInt();
+		id = ShapefileId.fromOrdinal(in.readInt());
 	}
 
 	public static final Parcelable.Creator<ShapefileConfig> CREATOR =

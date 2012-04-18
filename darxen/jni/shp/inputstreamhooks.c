@@ -140,7 +140,7 @@ bool unregisterInputStreams(JNIEnv* env, int id)
 
 static SAFile InputStream_FOpen(const char* filename, const char* access)
 {
-	log_debug("SAHooks: FOpen: %s", filename);
+	//log_debug("SAHooks: FOpen: %s", filename);
 	const char* ext = filename + strlen(filename) - 4;
 
 	ShapefileStreams* file = lookupInputStream(filename);
@@ -173,13 +173,16 @@ static SAOffset InputStream_FRead(void* p, SAOffset size, SAOffset nmemb, SAFile
 {
 	int res = -1;
 	JNIEnv* env = getJniEnv();
+	if ((*env)->PushLocalFrame(env, 10) < 0)
+		return -1;
 	InputFileStream* inputStream = (InputFileStream*)file;
 
 	jclass inputStreamClass = (*env)->FindClass(env, "java/io/InputStream");
 	jmethodID method = (*env)->GetMethodID(env, inputStreamClass, "read", "([BII)I");
-
+	
 	size_t pos = 0;
 	size_t total = size*nmemb;
+	//log_debug("Reading %ld bytes", size*nmemb);
 	do
 	{
 		int read = total-pos;
@@ -187,6 +190,7 @@ static SAOffset InputStream_FRead(void* p, SAOffset size, SAOffset nmemb, SAFile
 			read = BUFFER_SIZE;
 		read = (*env)->CallIntMethod(env, inputStream->fin, method,
 				inputStream->buffer, 0, read);
+		//__android_log_print(ANDROID_LOG_DEBUG, DEBUG_TAG, "Read %ld bytes", read);
 
 		void* arr = (*env)->GetByteArrayElements(env, inputStream->buffer, NULL);
 		memcpy(p + pos, arr, read);
@@ -198,6 +202,8 @@ static SAOffset InputStream_FRead(void* p, SAOffset size, SAOffset nmemb, SAFile
 	res = nmemb;
 
 Exit:
+	(*env)->PopLocalFrame(env, NULL);
+
 	return res;
 }
 
@@ -210,43 +216,71 @@ static SAOffset InputStream_FWrite(void* p, SAOffset size, SAOffset nmemb, SAFil
 static SAOffset InputStream_FSeek(SAFile file, SAOffset offset, int whence)
 {
 	JNIEnv* env = getJniEnv();
+	SAOffset res = -1;
+	if ((*env)->PushLocalFrame(env, 10) < 0)
+		return -1;
+
 	InputFileStream* inputStream = (InputFileStream*)file;
 
 	jclass inputStreamClass = (*env)->FindClass(env, "java/io/InputStream");
+	if (!inputStreamClass)
+	{
+		log_error("Unable to load InputStream");
+		goto Exit;
+	}
 
-	jmethodID methodReset = (*env)->GetMethodID(env, inputStreamClass, "reset", "()V");
 	jmethodID methodSkip = (*env)->GetMethodID(env, inputStreamClass, "skip", "(J)J");
-	long res;
 
-	long skip;
+	if (!methodSkip)
+	{
+		log_error("Unable to load InputStream methods");
+		goto Exit;
+	}
+
+	long long skip;
 	switch (whence)
 	{
 	case SEEK_SET:
-		skip = offset - inputStream->pos;
+		//log_debug("Seeking to %lu (from %lu) = %ld", offset, inputStream->pos, offset - inputStream->pos);
+		skip = offset;
+		skip -= inputStream->pos;
 		break;
 	case SEEK_CUR:
+		//log_debug("Seeking by %lu", offset);
 		skip = offset;
 		break;
 	default:
-		return -1;
+		goto Exit;
 	}
 
 	if (skip == 0)
-		return 0;
-
-	if (skip > 0)
 	{
-		res = (*env)->CallLongMethod(env, inputStream->fin, methodSkip, skip);
-		inputStream->pos += res;
+		res = 0;
+		goto Exit;
+	}
+    
+	//log_debug("Seeking by %lld bytes", skip);
+
+	long long skipped;
+	if (skip >= 0)
+	{
+		skipped = (*env)->CallLongMethod(env, inputStream->fin, methodSkip, skip);
+		inputStream->pos += skipped;
 	}
 	else
 	{
+		jmethodID methodReset = (*env)->GetMethodID(env, inputStreamClass, "reset", "()V");
 		(*env)->CallVoidMethod(env, inputStream->fin, methodReset);
-		res = (*env)->CallLongMethod(env, inputStream->fin, methodSkip, inputStream->pos+skip);
-		inputStream->pos = res;
+		skip += inputStream->pos;
+		skipped = (*env)->CallLongMethod(env, inputStream->fin, methodSkip, skip);
+		inputStream->pos = skipped;
 	}
 
-	return 0;
+	res = 0;
+Exit:
+	(*env)->PopLocalFrame(env, NULL);
+
+	return res;
 }
 
 static SAOffset InputStream_FTell(SAFile file)
@@ -263,7 +297,7 @@ static int InputStream_FFlush(SAFile file)
 
 static int InputStream_FClose(SAFile file)
 {
-	log_debug("SAHooks: FClose");
+	//log_debug("SAHooks: FClose");
 	InputFileStream* inputStream = (InputFileStream*)file;
 	
 	JNIEnv* env = getJniEnv();

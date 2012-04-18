@@ -7,10 +7,13 @@ import java.util.List;
 
 import me.kevinwells.darxen.LatLon;
 import me.kevinwells.darxen.Point2D;
-import me.kevinwells.darxen.ShapefileConfig;
 import me.kevinwells.darxen.ShapefileObjectPartRenderData;
 import me.kevinwells.darxen.ShapefileObjectRenderData;
 import me.kevinwells.darxen.ShapefileRenderData;
+import me.kevinwells.darxen.db.DbIterator;
+import me.kevinwells.darxen.db.ShapefileObjectsAdapter;
+import me.kevinwells.darxen.model.ShapefileConfig;
+import me.kevinwells.darxen.model.ShapefileObjectBounds;
 import me.kevinwells.darxen.shp.Shapefile;
 import me.kevinwells.darxen.shp.ShapefileObject;
 import me.kevinwells.darxen.shp.ShapefilePoint;
@@ -28,9 +31,13 @@ public class LoadShapefile extends CachedAsyncLoader<ShapefileRenderData> {
 	private ShapefileConfig mConfig;
 	private ShapefileRenderData mData;
 	
+	private ShapefileObjectBounds mPrevBounds;
+	
 	private static final String ARG_CENTER = "Center";
 	private static final String ARG_CONFIG = "Config";
 	private static final String ARG_DATA = "Data";
+	
+	private static final double DISPLAY_RADIUS = 4.0;
 	
 	public static Bundle bundleArgs(LatLon center, ShapefileConfig config, ShapefileRenderData data) {
 		Bundle args = new Bundle();
@@ -77,34 +84,52 @@ public class LoadShapefile extends CachedAsyncLoader<ShapefileRenderData> {
 	protected ShapefileRenderData doInBackground() {
 		//mData = mData.clone();
 		
+		//ensure we have cached bounding information for this shapefile
+		buildCache();
+
+		ShapefileObjectsAdapter adapter = new ShapefileObjectsAdapter();
+		
 		LatLon viewpoint = getViewpoint();
 
+		ShapefileObjectBounds bounds;
+		bounds = new ShapefileObjectBounds(
+				viewpoint.lon - DISPLAY_RADIUS, viewpoint.lon + DISPLAY_RADIUS,
+				viewpoint.lat - DISPLAY_RADIUS, viewpoint.lat + DISPLAY_RADIUS);
+		
 		Resources resources = getContext().getResources();
 		
 		InputStream fShp = resources.openRawResource(mConfig.resShp);
 		InputStream fShx = resources.openRawResource(mConfig.resShx);
 		
 		Shapefile shapefile = new Shapefile(fShp, fShx);
+		adapter.open();
 		try {
-			
-			for (int i = 0; i < shapefile.getShapeCount(); i++) {
-				ShapefileObject obj = shapefile.get(i);
+			DbIterator<Integer> ids;
+			if (mPrevBounds == null) {
+				ids = adapter.getBoundedObjects(mConfig.id, bounds);
+			} else {
+				ids = adapter.getExcludedObjects(mConfig.id, mPrevBounds, bounds);
 				
-				if (!obj.isNear(viewpoint.lat, viewpoint.lon)) {
-					obj.close();
-					mData.remove(i);
-					continue;
-					
-				} else if (mData.contains(i)) {
-					obj.close();
-					continue;
+				for (int id : ids) {
+					mData.remove(id);
 				}
 				
-				obj.load();
-				mData.add(i, generateObject(obj));
+				ids = adapter.getIncludedObjects(mConfig.id, mPrevBounds, bounds);
 			}
 			
+			for (int id : ids) {
+				if (mData.contains(id))
+					continue;
+				
+				ShapefileObject obj = shapefile.get(id);
+				obj.load();
+				mData.add(id, generateObject(obj));
+			}
+			
+			mPrevBounds = bounds;
+			
 		} finally {
+			adapter.close();
 			shapefile.close();
 			
 			try {
@@ -117,6 +142,49 @@ public class LoadShapefile extends CachedAsyncLoader<ShapefileRenderData> {
 		}
 		
 		return mData;
+	}
+	
+	private void buildCache() {
+		ShapefileObjectsAdapter adapter = new ShapefileObjectsAdapter();
+		adapter.open();
+		
+		if (adapter.hasCache(mConfig.id)) {
+			adapter.close();
+			return;
+		}
+		
+		Resources resources = getContext().getResources();
+		
+		InputStream fShp = resources.openRawResource(mConfig.resShp);
+		InputStream fShx = resources.openRawResource(mConfig.resShx);
+		
+		Shapefile shapefile = new Shapefile(fShp, fShx);
+		
+		adapter.startTransaction();
+		try {
+			for (int i = 0; i < shapefile.getShapeCount(); i++) {
+				ShapefileObject obj = shapefile.get(i);
+				
+				ShapefileObjectBounds bounds = new ShapefileObjectBounds(obj.dfXMin, obj.dfXMax, obj.dfYMin, obj.dfYMax);
+				adapter.addBounds(mConfig.id, i, bounds);
+				obj.close();
+			}
+		
+			adapter.commitTransaction();
+		} finally {
+			shapefile.close();
+			
+			try {
+				fShp.close();
+			} catch (IOException e) {}
+
+			try {
+				fShx.close();
+			} catch (IOException e) {}
+			
+			adapter.finishTransaction();
+			adapter.close();
+		}
 	}
 	
 	private ShapefileObjectRenderData generateObject(ShapefileObject obj) {

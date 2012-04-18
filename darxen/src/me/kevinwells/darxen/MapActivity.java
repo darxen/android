@@ -11,6 +11,8 @@ import me.kevinwells.darxen.loaders.FindSite;
 import me.kevinwells.darxen.loaders.LoadRadar;
 import me.kevinwells.darxen.loaders.LoadShapefile;
 import me.kevinwells.darxen.loaders.LoadSites;
+import me.kevinwells.darxen.model.ShapefileConfig;
+import me.kevinwells.darxen.model.ShapefileId;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -300,7 +302,7 @@ public class MapActivity extends SherlockFragmentActivity {
     	mShapefiles = new ArrayList<ShapefileInfo>();
     	{
         	//states
-    		ShapefileConfig config = new ShapefileConfig(R.raw.states_shp, R.raw.states_dbf, R.raw.states_shx);
+    		ShapefileConfig config = new ShapefileConfig(R.raw.states_shp, R.raw.states_dbf, R.raw.states_shx, ShapefileId.STATE_LINES);
     		ShapefileRenderConfig underRenderConfig = new ShapefileRenderConfig(new Color(1.0f, 1.0f, 1.0f), 3.0f, GL10.GL_LINE_STRIP);
     		ShapefileRenderConfig overRenderConfig = new ShapefileRenderConfig(new Color(1.0f, 1.0f, 1.0f, 0.4f), 3.0f, GL10.GL_LINE_STRIP);
     		mShapefiles.add(new ShapefileInfo(config, underRenderConfig, overRenderConfig));
@@ -310,7 +312,7 @@ public class MapActivity extends SherlockFragmentActivity {
     	if (Build.VERSION.SDK_INT > 8)
     	{
         	//counties
-    		ShapefileConfig config = new ShapefileConfig(R.raw.counties_shp, R.raw.counties_dbf, R.raw.counties_shx);
+    		ShapefileConfig config = new ShapefileConfig(R.raw.counties_shp, R.raw.counties_dbf, R.raw.counties_shx, ShapefileId.COUNTY_LINES);
     		ShapefileRenderConfig underRenderConfig = new ShapefileRenderConfig(new Color(0.75f, 0.75f, 0.75f), 1.0f, GL10.GL_LINE_STRIP);
     		ShapefileRenderConfig overRenderConfig = new ShapefileRenderConfig(new Color(0.75f, 0.75f, 0.75f, 0.4f), 1.0f, GL10.GL_LINE_STRIP);
     		mShapefiles.add(new ShapefileInfo(config, underRenderConfig, overRenderConfig));

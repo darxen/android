@@ -56,7 +56,7 @@ void Java_me_kevinwells_darxen_shp_Shapefile_init(JNIEnv* env, jobject this, job
 
 void Java_me_kevinwells_darxen_shp_Shapefile_close(JNIEnv* env, jobject this)
 {
-    __android_log_print(ANDROID_LOG_DEBUG, DEBUG_TAG, "Closing shapefile");
+    log_debug("Closing shapefile");
 
 	int id = getInt(env, this, "mInputId");
 	SHPHandle hShp = getShapeHandle(env, this);
@@ -93,7 +93,7 @@ Exit:
 jobject Java_me_kevinwells_darxen_shp_Shapefile_get(JNIEnv* env, jobject this, int i)
 {
 	jobject res = NULL;
-    //__android_log_print(ANDROID_LOG_DEBUG, DEBUG_TAG, "Reading shape: %d", i);
+    //log_debug("Reading shape: %d", i);
 
 	SHPHandle hShp = getShapeHandle(env, this);
 	if (!hShp)
@@ -108,9 +108,4 @@ jobject Java_me_kevinwells_darxen_shp_Shapefile_get(JNIEnv* env, jobject this, i
 Exit:
 	return res;
 }
-
-//int Java_me_kevinwells_darxen_shp_Shapefile_getShapeCount(JNIEnv * env, jobject this)
-//{
-//	return 42;
-//}
 
