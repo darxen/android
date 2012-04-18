@@ -10,9 +10,8 @@ import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
 
 import me.kevinwells.darxen.data.DataFile;
-import me.kevinwells.darxen.data.Description.OpMode;
 import me.kevinwells.darxen.data.RadialDataPacket;
-import me.kevinwells.darxen.data.RadialPacket;
+import me.kevinwells.darxen.renderables.RadarRenderable;
 import android.content.Context;
 import android.opengl.GLSurfaceView;
 import android.opengl.GLU;
@@ -29,50 +28,13 @@ public class RadarView extends GLSurfaceView implements GLSurfaceView.Renderer, 
 
 	private float[] mTransform = new float[32];
 	
-	private FloatBuffer[] mRadialBuffers = new FloatBuffer[16];
-	private int[] mRadialSize = new int[16];
-	
 	private List<Renderable> mBackground;
 	private List<Renderable> mForeground;
 	
+	private RadarRenderable mRadar;
+	
 	private ViewpointListener mViewpointListener;
 
-	private static Color[] REFLECTIVITY_PALETTE = new Color[] {
-			new Color(0.25f, 0.25f, 0.25f, 200.0f / 255.0f),
-			new Color(0.25f, 0.25f, 0.25f, 64.0f / 255.0f),
-			new Color(0.25f, 0.25f, 0.25f, 132.0f / 255.0f),
-			new Color(40.0f / 255.0f, 126.0f / 255.0f, 40.0f / 255.0f),
-			new Color(60.0f / 255.0f, 160.0f / 255.0f, 20.0f / 255.0f),
-			new Color(120.0f / 255.0f, 220.0f / 255.0f, 20.0f / 255.0f),
-			new Color(250.0f / 255.0f, 250.0f / 255.0f, 20.0f / 255.0f),
-			new Color(250.0f / 255.0f, 204.0f / 255.0f, 20.0f / 255.0f),
-			new Color(250.0f / 255.0f, 153.0f / 255.0f, 20.0f / 255.0f),
-			new Color(250.0f / 255.0f, 79.0f / 255.0f, 20.0f / 255.0f),
-			new Color(250.0f / 255.0f, 0.0f / 255.0f, 20.0f / 255.0f),
-			new Color(220.0f / 255.0f, 30.0f / 255.0f, 70.0f / 255.0f),
-			new Color(200.0f / 255.0f, 30.0f / 255.0f, 100.0f / 255.0f),
-			new Color(170.0f / 255.0f, 30.0f / 255.0f, 150.0f / 255.0f),
-			new Color(255.0f / 255.0f, 0.0f / 255.0f, 156.0f / 255.0f),
-			new Color(255.0f / 255.0f, 255.0f / 255.0f, 255.0f / 255.0f) };
-
-	private static Color[] CLEANAIR_PALETTE = new Color[] {
-			new Color(0.25f, 0.25f, 0.25f, 200.0f / 255.0f),
-			new Color(0.25f, 0.25f, 0.25f, 120.0f / 255.0f),
-			new Color(0.25f, 0.25f, 0.25f, 160.0f / 255.0f),
-			new Color(0.25f, 0.25f, 0.25f, 200.0f / 255.0f),
-			new Color(60.0f / 255.0f, 160.0f / 255.0f, 20.0f / 255.0f),
-			new Color(70.0f / 255.0f, 70.0f / 255.0f, 70.0f / 255.0f),
-			new Color(80.0f / 255.0f, 80.0f / 255.0f, 80.0f / 255.0f),
-			new Color(90.0f / 255.0f, 90.0f / 255.0f, 90.0f / 255.0f),
-			new Color(100.0f / 255.0f, 100.0f / 255.0f, 100.0f / 255.0f),
-			new Color(20.0f / 255.0f, 70.0f / 255.0f, 20.0f / 255.0f),
-			new Color(30.0f / 255.0f, 120.0f / 255.0f, 20.0f / 255.0f),
-			new Color(30.0f / 255.0f, 155.0f / 255.0f, 20.0f / 255.0f),
-			new Color(60.0f / 255.0f, 175.0f / 255.0f, 20.0f / 255.0f),
-			new Color(80.0f / 255.0f, 200.0f / 255.0f, 20.0f / 255.0f),
-			new Color(110.0f / 255.0f, 210.0f / 255.0f, 20.0f / 255.0f),
-			new Color(240.0f / 255.0f, 240.0f / 255.0f, 20.0f / 255.0f) };
-	
 	public RadarView(Context context) {
 		super(context);
 		mBackground = new ArrayList<Renderable>();
@@ -92,8 +54,11 @@ public class RadarView extends GLSurfaceView implements GLSurfaceView.Renderer, 
 		}
 		
 		mData = file;
-		for (int i = 0; i < mRadialBuffers.length; i++)
-			mRadialBuffers[i] = null;
+		mRadar = null;
+		
+		if (file != null) {
+			mRadar = new RadarRenderable(file);
+		}
 		
 		updateLocation();
 	}
@@ -191,13 +156,8 @@ public class RadarView extends GLSurfaceView implements GLSurfaceView.Renderer, 
 		}
 		
 		gl.glEnable(GL10.GL_BLEND);
-		if (mData != null) {
-			RadialDataPacket packet = (RadialDataPacket)mData.description.symbologyBlock.packets[0];
-	
-			Color[] palette = CLEANAIR_PALETTE;
-			if (mData.description.opmode == OpMode.PRECIPITATION)
-				palette = REFLECTIVITY_PALETTE;
-			renderRadialData(gl, packet, palette);
+		if (mRadar != null) {
+			mRadar.render(gl);
 		}
 		
 		for (Renderable renderable : mForeground) {
@@ -246,116 +206,4 @@ public class RadarView extends GLSurfaceView implements GLSurfaceView.Renderer, 
 		gl.glDisable(GL10.GL_COLOR_MATERIAL);
 		gl.glTexEnvx(GL10.GL_TEXTURE_ENV, GL10.GL_TEXTURE_ENV_MODE, GL10.GL_MODULATE);
 	}
-	
-	private void renderRadialData(GL10 gl, RadialDataPacket packet, Color[] palette) {
-		float kmPerRangeBin = 1.0f;
-		
-		for (int i = 1; i < 16; i++) {
-			if (mRadialBuffers[i] == null) {
-				TriangleBuffer buffer = new TriangleBuffer();
-				for (int az = 0; az < packet.radials.length; az++) {
-					RadialPacket radial = packet.radials[az];
-					
-					float start = 90.0f - (radial.start + radial.delta);
-					float end = start + radial.delta;
-					float cosx1 = (float)Math.cos(Math.toRadians(start));
-					float siny1 = (float)Math.sin(Math.toRadians(start));
-					float cosx2 = (float)Math.cos(Math.toRadians(end));
-					float siny2 = (float)Math.sin(Math.toRadians(end));
-					
-					int startRange = 0;
-					for (int range = 0; range < radial.codes.length; range++) {
-						int color = radial.codes[range];
-						if (startRange == 0 && color == i)
-							startRange = range;
-						
-						if ((startRange != 0 && color < i) ||
-								(startRange != 0 && (range == packet.rangeBinCount-1))) {
-							if (color >= i && range == packet.rangeBinCount-1)
-								range++;
-							Vertex v1 = new Vertex(
-									(startRange-1) * kmPerRangeBin * cosx1,
-									(startRange-1) * kmPerRangeBin * siny1);
-							Vertex v2 = new Vertex(
-									(range-1) * kmPerRangeBin * cosx1,
-									(range-1) * kmPerRangeBin * siny1);
-							Vertex v3 = new Vertex(
-									(range-1) * kmPerRangeBin * cosx2,
-									(range-1) * kmPerRangeBin * siny2);
-							Vertex v4 = new Vertex(
-									(startRange-1) * kmPerRangeBin * cosx2,
-									(startRange-1) * kmPerRangeBin * siny2);
-							
-							buffer.addTriangle(v1, v2, v3);
-							buffer.addTriangle(v3, v4, v1);
-							startRange = 0;
-						}
-					}
-				}
-				mRadialBuffers[i] = buffer.getBuffer();
-				mRadialSize[i] = buffer.size();
-			}
-			
-			Color c = palette[i];
-			gl.glColor4f(c.r, c.g, c.b, c.a);
-			FloatBuffer buf = mRadialBuffers[i];
-			gl.glVertexPointer(2, GL10.GL_FLOAT, 0, buf);
-			gl.glDrawArrays(GL10.GL_TRIANGLES, 0, mRadialSize[i]);
-		}
-	}
-	
-	public class Vertex {
-		public float x;
-		public float y;
-		public Vertex(float x, float y) {
-			this.x = x;
-			this.y = y;
-		}
-	}
-	
-	public class TriangleBuffer {
-		
-		private class Triangle {
-			public Vertex p1;
-			public Vertex p2;
-			public Vertex p3;
-			public Triangle(Vertex p1, Vertex p2, Vertex p3) {
-				this.p1 = p1;
-				this.p2 = p2;
-				this.p3 = p3;
-			}
-		}
-		
-		private ArrayList<Triangle> buffer;
-		
-		public TriangleBuffer() {
-			buffer = new ArrayList<Triangle>();
-		}
-		
-		public int size() {
-			return buffer.size() * 3;
-		}
-
-		public void addTriangle(Vertex p1, Vertex p2, Vertex p3) {
-			buffer.add(new Triangle(p1, p2, p3));
-		}
-		
-		public FloatBuffer getBuffer() {
-			ByteBuffer vbb = ByteBuffer.allocateDirect(buffer.size() * 2 * 3 * 4);
-			vbb.order(ByteOrder.nativeOrder());
-			FloatBuffer buf = vbb.asFloatBuffer();
-			
-			for (Triangle t : buffer) {
-				buf.put(t.p1.x);
-				buf.put(t.p1.y);
-				buf.put(t.p2.x);
-				buf.put(t.p2.y);
-				buf.put(t.p3.x);
-				buf.put(t.p3.y);
-			}
-			buf.position(0);
-			return buf;
-		}
-	}
-	
 }
