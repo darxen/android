@@ -18,6 +18,7 @@ public class ShapefileObjectsAdapter extends TableAdapter {
 	public static final String KEY_Y_MAX = "YMax";
 	
 	public boolean hasCache(ShapefileId shapefile) {
+		//FIXME use a separate table with bits marking a shapefile as cached
 		String projection[] = {KEY_ID};
 		String args[] = {String.valueOf(shapefile.ordinal())};
 		Cursor cursor;

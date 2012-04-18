@@ -1,5 +1,7 @@
 package me.kevinwells.darxen;
 
+import me.kevinwells.darxen.model.Color;
+
 public class ShapefileRenderConfig {
 
 	public Color mColor;

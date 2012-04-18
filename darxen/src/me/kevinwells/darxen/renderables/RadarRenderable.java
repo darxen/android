@@ -1,68 +1,34 @@
 package me.kevinwells.darxen.renderables;
 
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
 import java.util.ArrayList;
 
 import javax.microedition.khronos.opengles.GL10;
 
-import me.kevinwells.darxen.Color;
 import me.kevinwells.darxen.Renderable;
 import me.kevinwells.darxen.data.DataFile;
 import me.kevinwells.darxen.data.Description.OpMode;
 import me.kevinwells.darxen.data.RadialDataPacket;
 import me.kevinwells.darxen.data.RadialPacket;
+import me.kevinwells.darxen.model.Buffers;
+import me.kevinwells.darxen.model.Color;
+import me.kevinwells.darxen.model.Palette;
+import me.kevinwells.darxen.model.PaletteType;
 
 public class RadarRenderable implements Renderable {
 	
-	private static Color[] REFLECTIVITY_PALETTE = new Color[] {
-			new Color(0.25f, 0.25f, 0.25f, 200.0f / 255.0f),
-			new Color(0.25f, 0.25f, 0.25f, 64.0f / 255.0f),
-			new Color(0.25f, 0.25f, 0.25f, 132.0f / 255.0f),
-			new Color(40.0f / 255.0f, 126.0f / 255.0f, 40.0f / 255.0f),
-			new Color(60.0f / 255.0f, 160.0f / 255.0f, 20.0f / 255.0f),
-			new Color(120.0f / 255.0f, 220.0f / 255.0f, 20.0f / 255.0f),
-			new Color(250.0f / 255.0f, 250.0f / 255.0f, 20.0f / 255.0f),
-			new Color(250.0f / 255.0f, 204.0f / 255.0f, 20.0f / 255.0f),
-			new Color(250.0f / 255.0f, 153.0f / 255.0f, 20.0f / 255.0f),
-			new Color(250.0f / 255.0f, 79.0f / 255.0f, 20.0f / 255.0f),
-			new Color(250.0f / 255.0f, 0.0f / 255.0f, 20.0f / 255.0f),
-			new Color(220.0f / 255.0f, 30.0f / 255.0f, 70.0f / 255.0f),
-			new Color(200.0f / 255.0f, 30.0f / 255.0f, 100.0f / 255.0f),
-			new Color(170.0f / 255.0f, 30.0f / 255.0f, 150.0f / 255.0f),
-			new Color(255.0f / 255.0f, 0.0f / 255.0f, 156.0f / 255.0f),
-			new Color(255.0f / 255.0f, 255.0f / 255.0f, 255.0f / 255.0f) };
-
-	private static Color[] CLEANAIR_PALETTE = new Color[] {
-			new Color(0.25f, 0.25f, 0.25f, 200.0f / 255.0f),
-			new Color(0.25f, 0.25f, 0.25f, 120.0f / 255.0f),
-			new Color(0.25f, 0.25f, 0.25f, 160.0f / 255.0f),
-			new Color(0.25f, 0.25f, 0.25f, 200.0f / 255.0f),
-			new Color(60.0f / 255.0f, 160.0f / 255.0f, 20.0f / 255.0f),
-			new Color(70.0f / 255.0f, 70.0f / 255.0f, 70.0f / 255.0f),
-			new Color(80.0f / 255.0f, 80.0f / 255.0f, 80.0f / 255.0f),
-			new Color(90.0f / 255.0f, 90.0f / 255.0f, 90.0f / 255.0f),
-			new Color(100.0f / 255.0f, 100.0f / 255.0f, 100.0f / 255.0f),
-			new Color(20.0f / 255.0f, 70.0f / 255.0f, 20.0f / 255.0f),
-			new Color(30.0f / 255.0f, 120.0f / 255.0f, 20.0f / 255.0f),
-			new Color(30.0f / 255.0f, 155.0f / 255.0f, 20.0f / 255.0f),
-			new Color(60.0f / 255.0f, 175.0f / 255.0f, 20.0f / 255.0f),
-			new Color(80.0f / 255.0f, 200.0f / 255.0f, 20.0f / 255.0f),
-			new Color(110.0f / 255.0f, 210.0f / 255.0f, 20.0f / 255.0f),
-			new Color(240.0f / 255.0f, 240.0f / 255.0f, 20.0f / 255.0f) };
-	
-	private Color[] mPalette;
+	private Palette mPalette;
 	
 	private FloatBuffer[] mRadialBuffers = new FloatBuffer[16];
 	private int[] mRadialSize = new int[16];
 	
 	public RadarRenderable(DataFile data) {
 		RadialDataPacket packet = (RadialDataPacket)data.description.symbologyBlock.packets[0];
-		
-		mPalette = CLEANAIR_PALETTE;
+
 		if (data.description.opmode == OpMode.PRECIPITATION)
-			mPalette = REFLECTIVITY_PALETTE;
+			mPalette = new Palette(PaletteType.REFLECTIVITY_PRECIPITATION);
+		else
+			mPalette = new Palette(PaletteType.REFLECTIVITY_CLEAN_AIR);
 
 		renderRadialData(packet);
 	}
@@ -70,7 +36,7 @@ public class RadarRenderable implements Renderable {
 	@Override
 	public void render(GL10 gl) {
 		for (int i = 1; i < 16; i++) {
-			Color c = mPalette[i];
+			Color c = mPalette.get(i);
 			gl.glColor4f(c.r, c.g, c.b, c.a);
 			FloatBuffer buf = mRadialBuffers[i];
 			gl.glVertexPointer(2, GL10.GL_FLOAT, 0, buf);
@@ -166,9 +132,7 @@ public class RadarRenderable implements Renderable {
 		}
 		
 		public FloatBuffer getBuffer() {
-			ByteBuffer vbb = ByteBuffer.allocateDirect(buffer.size() * 2 * 3 * 4);
-			vbb.order(ByteOrder.nativeOrder());
-			FloatBuffer buf = vbb.asFloatBuffer();
+			FloatBuffer buf = Buffers.allocateFloat(buffer.size() * 2 * 3);
 			
 			for (Triangle t : buffer) {
 				buf.put(t.p1.x);

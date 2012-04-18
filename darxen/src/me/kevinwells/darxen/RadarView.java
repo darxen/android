@@ -1,7 +1,5 @@
 package me.kevinwells.darxen;
 
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
 import java.util.ArrayList;
 import java.util.List;
@@ -11,15 +9,24 @@ import javax.microedition.khronos.opengles.GL10;
 
 import me.kevinwells.darxen.data.DataFile;
 import me.kevinwells.darxen.data.RadialDataPacket;
+import me.kevinwells.darxen.loaders.RenderLegend;
+import me.kevinwells.darxen.model.Buffers;
+import me.kevinwells.darxen.model.LegendRenderData;
+import me.kevinwells.darxen.renderables.LegendRenderable;
 import me.kevinwells.darxen.renderables.RadarRenderable;
 import android.content.Context;
 import android.opengl.GLSurfaceView;
 import android.opengl.GLU;
 import android.opengl.Matrix;
+import android.os.Bundle;
+import android.support.v4.app.LoaderManager;
+import android.support.v4.content.Loader;
 import android.view.MotionEvent;
 
 public class RadarView extends GLSurfaceView implements GLSurfaceView.Renderer, GestureSurface {
 
+	private LoaderManager mLoaderManager;
+	
 	private DataFile mData;
 	private LatLon mPos;
 	private FloatBuffer mPosBuf;
@@ -33,12 +40,17 @@ public class RadarView extends GLSurfaceView implements GLSurfaceView.Renderer, 
 	private List<Renderable> mBackground;
 	private List<Renderable> mForeground;
 	
+	private LegendRenderable mLegend;
 	private RadarRenderable mRadar;
 	
 	private ViewpointListener mViewpointListener;
+	
+	private static final int TASK_RENDER_LEGEND = 100;
 
-	public RadarView(Context context) {
+	public RadarView(Context context, LoaderManager loaderManager) {
 		super(context);
+		mLoaderManager = loaderManager;
+		
 		mBackground = new ArrayList<Renderable>();
 		mForeground = new ArrayList<Renderable>();
 		
@@ -61,6 +73,7 @@ public class RadarView extends GLSurfaceView implements GLSurfaceView.Renderer, 
 		
 		if (file != null) {
 			mRadar = new RadarRenderable(file);
+			loadLegend();
 		}
 		
 		updateLocation();
@@ -138,9 +151,7 @@ public class RadarView extends GLSurfaceView implements GLSurfaceView.Renderer, 
 			return;
 		}
 		
-		ByteBuffer vbb = ByteBuffer.allocateDirect(2 * 4);
-		vbb.order(ByteOrder.nativeOrder());
-		mPosBuf = vbb.asFloatBuffer();
+		mPosBuf = Buffers.allocateFloat(2);
 
 		Point2D p = mPos.project(new LatLon(mData.description.lat, mData.description.lon), null);
 		mPosBuf.put((float)p.x);
@@ -173,14 +184,42 @@ public class RadarView extends GLSurfaceView implements GLSurfaceView.Renderer, 
 			renderable.render(gl);
 		}
 		
-		//TODO render legend
-		
 		if (mPosBuf != null) {
 			gl.glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
 			gl.glVertexPointer(2, GL10.GL_FLOAT, 0, mPosBuf);
 			gl.glPointSize(10.0f);
 			gl.glDrawArrays(GL10.GL_POINTS, 0, 1);
 		}
+		
+		renderLegend(gl);
+	}
+	
+	private void renderLegend(GL10 gl) {
+		gl.glMatrixMode(GL10.GL_PROJECTION);
+		gl.glPushMatrix();
+		gl.glLoadIdentity();
+		//GLU.gluOrtho2D(gl, 0, getWidth(), getHeight(), 0);
+		{
+			float width = getWidth();
+			float height = getHeight();
+			if (height > width) {
+				float aspect = (float)height / width;
+				GLU.gluOrtho2D(gl, 0, 1, aspect, 0);
+			} else {
+				float aspect = (float)width/ height;
+				GLU.gluOrtho2D(gl, 0, aspect, 1, 0);
+			}
+		}
+		gl.glMatrixMode(GL10.GL_MODELVIEW);
+		gl.glLoadIdentity();
+		
+		if (mLegend != null) {
+			mLegend.render(gl);
+		}
+		
+		gl.glMatrixMode(GL10.GL_PROJECTION);
+		gl.glPopMatrix();
+		gl.glMatrixMode(GL10.GL_MODELVIEW);
 	}
 
 	@Override
@@ -215,4 +254,29 @@ public class RadarView extends GLSurfaceView implements GLSurfaceView.Renderer, 
 		gl.glDisable(GL10.GL_COLOR_MATERIAL);
 		gl.glTexEnvx(GL10.GL_TEXTURE_ENV, GL10.GL_TEXTURE_ENV_MODE, GL10.GL_MODULATE);
 	}
+	
+	private void loadLegend() {
+		LegendRenderData renderData = new LegendRenderData();
+		if (mLegend == null) {
+			mLegend = new LegendRenderable(renderData);
+		}
+		Bundle args = RenderLegend.bundleArgs(mData, renderData);
+		mLoaderManager.initLoader(TASK_RENDER_LEGEND, args, mTaskLoadLegendCallbacks);
+	}
+	
+    private LoaderManager.LoaderCallbacks<LegendRenderData> mTaskLoadLegendCallbacks =
+    		new LoaderManager.LoaderCallbacks<LegendRenderData>() {
+		@Override
+		public Loader<LegendRenderData> onCreateLoader(int id, Bundle args) {
+			return RenderLegend.createInstance(getContext(), args);
+		}
+		@Override
+		public void onLoadFinished(Loader<LegendRenderData> loader, LegendRenderData renderData) {
+			mLegend.setData(renderData);
+		}
+		@Override
+		public void onLoaderReset(Loader<LegendRenderData> loader) {
+			mLegend.setData(null);
+		}
+    };
 }

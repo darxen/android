@@ -1,4 +1,4 @@
-package me.kevinwells.darxen;
+package me.kevinwells.darxen.model;
 
 import android.os.Parcel;
 import android.os.Parcelable;

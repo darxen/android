@@ -11,8 +11,10 @@ import me.kevinwells.darxen.loaders.FindSite;
 import me.kevinwells.darxen.loaders.LoadRadar;
 import me.kevinwells.darxen.loaders.LoadShapefile;
 import me.kevinwells.darxen.loaders.LoadSites;
+import me.kevinwells.darxen.model.Color;
 import me.kevinwells.darxen.model.ShapefileConfig;
 import me.kevinwells.darxen.model.ShapefileId;
+import me.kevinwells.darxen.renderables.LinearShapefileRenderable;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -67,7 +69,7 @@ public class MapActivity extends SherlockFragmentActivity {
         }
         setContentView(R.layout.main);
         
-        mRadarView = new RadarView(this);
+        mRadarView = new RadarView(this, getSupportLoaderManager());
         ((FrameLayout)findViewById(R.id.container)).addView(mRadarView);
         
         mTitle = (TextView)findViewById(R.id.title);

@@ -1,6 +1,13 @@
-package me.kevinwells.darxen;
+package me.kevinwells.darxen.renderables;
 
 import javax.microedition.khronos.opengles.GL10;
+
+import me.kevinwells.darxen.Renderable;
+import me.kevinwells.darxen.ShapefileObjectPartRenderData;
+import me.kevinwells.darxen.ShapefileObjectRenderData;
+import me.kevinwells.darxen.ShapefileRenderConfig;
+import me.kevinwells.darxen.ShapefileRenderData;
+import me.kevinwells.darxen.model.Color;
 
 public class LinearShapefileRenderable implements Renderable {
 	

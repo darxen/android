@@ -1,8 +1,12 @@
 package me.kevinwells.darxen.data;
 
 import java.io.IOException;
+import java.util.HashMap;
 
-public class Description {
+import android.os.Parcel;
+import android.os.Parcelable;
+
+public class Description implements Parcelable {
 	
 	public float lat;
 	public float lon;
@@ -10,6 +14,10 @@ public class Description {
 	public OpMode opmode;
 	
 	public SymbologyBlock symbologyBlock;
+	
+	public Description() {
+		
+	}
 
 	public static Description parse(DataFileStream stream) throws ParseException, IOException {
 		Description res = new Description();
@@ -77,7 +85,50 @@ public class Description {
 	public enum OpMode {
 		MAINTENANCE,
 		CLEAN_AIR,
-		PRECIPITATION
+		PRECIPITATION;
+		
+		private static HashMap<Integer, OpMode> types;
+		
+		static {
+			types = new HashMap<Integer, OpMode>();
+			for (OpMode type : OpMode.values()) {
+				types.put(type.ordinal(), type);
+			}
+		}
+		
+		public static OpMode fromOrdinal(int ordinal) {
+			return types.get(ordinal);
+		}
 	}
 
+	@Override
+	public int describeContents() {
+		return 0;
+	}
+
+	@Override
+	public void writeToParcel(Parcel dest, int flags) {
+		dest.writeFloat(lat);
+		dest.writeFloat(lon);
+		dest.writeInt(opmode.ordinal());
+		//SymbologyBlock
+	}
+	
+	public Description(Parcel in) {
+		lat = in.readFloat();
+		lon = in.readFloat();
+		opmode = OpMode.fromOrdinal(in.readInt());
+	}
+
+	public static final Parcelable.Creator<Description> CREATOR = 
+			new Parcelable.Creator<Description>() {
+		@Override
+		public Description createFromParcel(Parcel source) {
+			return new Description(source);
+		}
+		@Override
+		public Description[] newArray(int size) {
+			return new Description[size];
+		}
+	};
 }

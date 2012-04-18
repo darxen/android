@@ -1,9 +1,8 @@
 package me.kevinwells.darxen;
 
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
 
+import me.kevinwells.darxen.model.Buffers;
 import android.os.Parcel;
 import android.os.Parcelable;
 
@@ -24,9 +23,7 @@ public class ShapefileObjectPartRenderData implements Parcelable {
 			throw new IllegalStateException("Buffer already populated");
 		}
 
-		ByteBuffer vbb = ByteBuffer.allocateDirect(array.length * 4);
-		vbb.order(ByteOrder.nativeOrder());
-		mBuffer = vbb.asFloatBuffer();
+		mBuffer = Buffers.allocateFloat(array.length);
 		
 		mBuffer.put(array);
 		mBuffer.position(0);
@@ -47,24 +44,13 @@ public class ShapefileObjectPartRenderData implements Parcelable {
 	public void writeToParcel(Parcel dest, int flags) {
 		dest.writeInt(mCount);
 		
-		int size = mBuffer.capacity();
-		dest.writeInt(size);
-		for (int i = 0; i < size; i++) {
-			dest.writeFloat(mBuffer.get(i));
-		}
+		Buffers.parcel(mBuffer, dest);
 	}
 
 	public ShapefileObjectPartRenderData(Parcel in) {
 		mCount = in.readInt();
 		
-		int size = in.readInt();
-		ByteBuffer vbb = ByteBuffer.allocateDirect(size);
-		vbb.order(ByteOrder.nativeOrder());
-		mBuffer = vbb.asFloatBuffer();
-		for (int i = 0; i < size; i++) {
-			mBuffer.put(in.readFloat());
-		}
-		mBuffer.position(0);
+		mBuffer = Buffers.unparcel(in);
 	}
 
 	public static final Parcelable.Creator<ShapefileObjectPartRenderData> CREATOR =
