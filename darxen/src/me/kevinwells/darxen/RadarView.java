@@ -10,8 +10,10 @@ import javax.microedition.khronos.opengles.GL10;
 import me.kevinwells.darxen.data.DataFile;
 import me.kevinwells.darxen.data.RadialDataPacket;
 import me.kevinwells.darxen.loaders.RenderLegend;
+import me.kevinwells.darxen.loaders.RenderRadar;
 import me.kevinwells.darxen.model.Buffers;
 import me.kevinwells.darxen.model.LegendRenderData;
+import me.kevinwells.darxen.model.RadarRenderData;
 import me.kevinwells.darxen.renderables.LegendRenderable;
 import me.kevinwells.darxen.renderables.RadarRenderable;
 import android.content.Context;
@@ -45,7 +47,8 @@ public class RadarView extends GLSurfaceView implements GLSurfaceView.Renderer, 
 	
 	private ViewpointListener mViewpointListener;
 	
-	private static final int TASK_RENDER_LEGEND = 100;
+	private static final int TASK_RENDER_RADAR = 100;
+	private static final int TASK_RENDER_LEGEND = 101;
 
 	public RadarView(Context context, LoaderManager loaderManager) {
 		super(context);
@@ -72,7 +75,7 @@ public class RadarView extends GLSurfaceView implements GLSurfaceView.Renderer, 
 		mRadar = null;
 		
 		if (file != null) {
-			mRadar = new RadarRenderable(file);
+			loadRadar();
 			loadLegend();
 		}
 		
@@ -254,6 +257,31 @@ public class RadarView extends GLSurfaceView implements GLSurfaceView.Renderer, 
 		gl.glDisable(GL10.GL_COLOR_MATERIAL);
 		gl.glTexEnvx(GL10.GL_TEXTURE_ENV, GL10.GL_TEXTURE_ENV_MODE, GL10.GL_MODULATE);
 	}
+	
+	private void loadRadar() {
+		RadarRenderData renderData = new RadarRenderData();
+		if (mRadar == null) {
+			mRadar = new RadarRenderable(renderData);
+		}
+		Bundle args = RenderRadar.bundleArgs(mData, renderData);
+		mLoaderManager.initLoader(TASK_RENDER_RADAR, args, mTaskLoadRadarCallbacks);
+	}
+	
+    private LoaderManager.LoaderCallbacks<RadarRenderData> mTaskLoadRadarCallbacks =
+    		new LoaderManager.LoaderCallbacks<RadarRenderData>() {
+		@Override
+		public Loader<RadarRenderData> onCreateLoader(int id, Bundle args) {
+			return RenderRadar.createInstance(getContext(), args);
+		}
+		@Override
+		public void onLoadFinished(Loader<RadarRenderData> loader, RadarRenderData renderData) {
+			mRadar.setData(renderData);
+		}
+		@Override
+		public void onLoaderReset(Loader<RadarRenderData> loader) {
+			mRadar.setData(null);
+		}
+    };
 	
 	private void loadLegend() {
 		LegendRenderData renderData = new LegendRenderData();

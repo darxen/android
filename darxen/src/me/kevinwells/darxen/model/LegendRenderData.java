@@ -36,7 +36,7 @@ public class LegendRenderData implements Parcelable {
 		return mCount;
 	}
 
-	public void setBuffers(FloatBuffer vertexBuffer, FloatBuffer colorBuffer, int count) {
+	public synchronized void setBuffers(FloatBuffer vertexBuffer, FloatBuffer colorBuffer, int count) {
 		mVertexBuffer = vertexBuffer;
 		mColorBuffer = colorBuffer;
 		mCount = count;
