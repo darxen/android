@@ -1,6 +1,5 @@
 package me.kevinwells.darxen;
 
-import java.nio.FloatBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -10,11 +9,13 @@ import javax.microedition.khronos.opengles.GL10;
 import me.kevinwells.darxen.data.DataFile;
 import me.kevinwells.darxen.data.RadialDataPacket;
 import me.kevinwells.darxen.loaders.RenderLegend;
+import me.kevinwells.darxen.loaders.RenderLocation;
 import me.kevinwells.darxen.loaders.RenderRadar;
-import me.kevinwells.darxen.model.Buffers;
 import me.kevinwells.darxen.model.LegendRenderData;
+import me.kevinwells.darxen.model.LocationRenderData;
 import me.kevinwells.darxen.model.RadarRenderData;
 import me.kevinwells.darxen.renderables.LegendRenderable;
+import me.kevinwells.darxen.renderables.LocationRenderable;
 import me.kevinwells.darxen.renderables.RadarRenderable;
 import android.content.Context;
 import android.opengl.GLSurfaceView;
@@ -25,30 +26,33 @@ import android.support.v4.app.LoaderManager;
 import android.support.v4.content.Loader;
 import android.view.MotionEvent;
 
-public class RadarView extends GLSurfaceView implements GLSurfaceView.Renderer, GestureSurface {
+public class RadarView extends GLSurfaceView implements GLSurfaceView.Renderer, GestureSurface, MapMarkerCallbacks {
 
 	private LoaderManager mLoaderManager;
 	
 	private DataFile mData;
-	private LatLon mPos;
-	private FloatBuffer mPosBuf;
 	
 	private LatLon mCenter;
 	
 	private GestureRecognizer mRecognizer = new GestureRecognizer(this);
 
-	private float[] mTransform = new float[32];
+	private float[] mTransform = new float[48];
+	private static final int OFFSET_RENDER = 0;
+	private static final int OFFSET_CURRENT = 16;
+	private static final int OFFSET_TEMP = 32;
 	
 	private List<Renderable> mBackground;
 	private List<Renderable> mForeground;
 	
 	private LegendRenderable mLegend;
 	private RadarRenderable mRadar;
+	private LocationRenderable mLocation;
 	
 	private ViewpointListener mViewpointListener;
 	
 	private static final int TASK_RENDER_RADAR = 100;
 	private static final int TASK_RENDER_LEGEND = 101;
+	private static final int TASK_RENDER_LOCATION = 102;
 
 	public RadarView(Context context, LoaderManager loaderManager) {
 		super(context);
@@ -59,14 +63,15 @@ public class RadarView extends GLSurfaceView implements GLSurfaceView.Renderer, 
 		
 		//setEGLContextClientVersion(2);
 		setRenderer(this);
-		Matrix.setIdentityM(mTransform, 0);
+		Matrix.setIdentityM(mTransform, OFFSET_CURRENT);
 		scale(1.0f/230.0f);
+		updateRenderTransform();
 	}
 
 	public synchronized void setData(DataFile data) {
 		if (mData == null) {
 			//set the initial transform
-			Matrix.setIdentityM(mTransform, 0);
+			Matrix.setIdentityM(mTransform, OFFSET_CURRENT);
 			RadialDataPacket packet = (RadialDataPacket)data.description.symbologyBlock.packets[0];
 			scale(1.0f/packet.rangeBinCount);
 		}
@@ -81,8 +86,6 @@ public class RadarView extends GLSurfaceView implements GLSurfaceView.Renderer, 
 			reloadRadar();
 			reloadLegend();
 		}
-		
-		updateLocation();
 	}
 	
 	public synchronized void setCenter(LatLon center) {
@@ -111,25 +114,31 @@ public class RadarView extends GLSurfaceView implements GLSurfaceView.Renderer, 
 	
 	@Override
 	public void scale(float factor) {
-		Matrix.setIdentityM(mTransform, 16);
-		Matrix.scaleM(mTransform, 16, factor, factor, 1.0f);
-		Matrix.multiplyMM(mTransform, 0, mTransform, 16, mTransform, 0);
+		Matrix.setIdentityM(mTransform, OFFSET_TEMP);
+		Matrix.scaleM(mTransform, OFFSET_TEMP, factor, factor, 1.0f);
+		Matrix.multiplyMM(mTransform, OFFSET_CURRENT, mTransform, OFFSET_TEMP, mTransform, OFFSET_CURRENT);
 	}
 	
 	@Override
 	public void translate(float dx, float dy) {
-		Matrix.setIdentityM(mTransform, 16);
-		Matrix.translateM(mTransform, 16, dx, dy, 0.0f);
-		Matrix.multiplyMM(mTransform, 0, mTransform, 16, mTransform, 0);
+		Matrix.setIdentityM(mTransform, OFFSET_TEMP);
+		Matrix.translateM(mTransform, OFFSET_TEMP, dx, dy, 0.0f);
+		Matrix.multiplyMM(mTransform, OFFSET_CURRENT, mTransform, OFFSET_TEMP, mTransform, OFFSET_CURRENT);
 	}
 	
 	@Override
 	public void onTouchUpdate() {
 		updateViewpoint();
+		updateRenderTransform();
+	}
+	
+	private synchronized void updateRenderTransform() {
+		for (int i = 0; i < 16; i++)
+			mTransform[OFFSET_RENDER+i] = mTransform[OFFSET_CURRENT+i];
 	}
 	
 	private void updateViewpoint() {
-		if (!Matrix.invertM(mTransform, 16, mTransform, 0))
+		if (!Matrix.invertM(mTransform, OFFSET_TEMP, mTransform, OFFSET_CURRENT))
 			return;
 		
 		if (mCenter == null)
@@ -137,7 +146,7 @@ public class RadarView extends GLSurfaceView implements GLSurfaceView.Renderer, 
 
 		float vect[] = new float[4];
 		vect[3] = 1.0f;
-		Matrix.multiplyMV(vect, 0, mTransform, 16, vect, 0);
+		Matrix.multiplyMV(vect, 0, mTransform, OFFSET_TEMP, vect, 0);
 
 		LatLon viewpoint = LatLon.unproject(new Point2D(vect[0], vect[1]), mCenter, null);
 		
@@ -147,24 +156,18 @@ public class RadarView extends GLSurfaceView implements GLSurfaceView.Renderer, 
 	}
 	
 	public synchronized void setLocation(LatLon pos) {
-		mPos = pos;
-		updateLocation();
+		updateLocation(pos);
 	}
 	
-	private void updateLocation() {
-		if (mData == null || mPos == null) {
-			mPosBuf = null;
-			return;
+	private void updateLocation(LatLon pos) {
+		if (mCenter == null || pos == null) {
+			loadLocation(null);
+			
+		} else {
+			Point2D p = null;
+			p = pos.project(mCenter, null);
+			loadLocation(p);			
 		}
-		
-		//TODO loader, and a better position marker
-		
-		mPosBuf = Buffers.allocateFloat(2);
-
-		Point2D p = mPos.project(new LatLon(mData.description.lat, mData.description.lon), null);
-		mPosBuf.put((float)p.x);
-		mPosBuf.put((float)p.y);
-		mPosBuf.position(0);
 	}
 	
 	@Override
@@ -177,7 +180,7 @@ public class RadarView extends GLSurfaceView implements GLSurfaceView.Renderer, 
 		
 		gl.glClear(GL10.GL_COLOR_BUFFER_BIT);
 		gl.glLoadIdentity();
-		gl.glMultMatrixf(mTransform, 0);
+		gl.glMultMatrixf(mTransform, OFFSET_RENDER);
 		
 		for (Renderable renderable : mBackground) {
 			renderable.render(gl);
@@ -192,14 +195,17 @@ public class RadarView extends GLSurfaceView implements GLSurfaceView.Renderer, 
 			renderable.render(gl);
 		}
 		
-		if (mPosBuf != null) {
-			gl.glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
-			gl.glVertexPointer(2, GL10.GL_FLOAT, 0, mPosBuf);
-			gl.glPointSize(10.0f);
-			gl.glDrawArrays(GL10.GL_POINTS, 0, 1);
-		}
+		renderMapLegend(gl);
 		
 		renderLegend(gl);
+	}
+	
+	private void renderMapLegend(GL10 gl) {
+		gl.glLoadIdentity();
+		
+		if (mLocation != null) {
+			mLocation.render(gl, this);
+		}
 	}
 	
 	private void renderLegend(GL10 gl) {
@@ -330,4 +336,53 @@ public class RadarView extends GLSurfaceView implements GLSurfaceView.Renderer, 
 			mLegend.setData(new LegendRenderData());
 		}
     };
+    
+	private void loadLocation(Point2D position) {
+		if (mLocation == null) {
+			LocationRenderData renderData = new LocationRenderData();
+			renderData.setPosition(position);
+			mLocation = new LocationRenderable(renderData);
+			Bundle args = RenderLocation.bundleArgs(renderData);
+			mLoaderManager.initLoader(TASK_RENDER_LOCATION, args, mTaskLoadLocationCallbacks);
+			
+		} else {
+			if (position != null)
+				mLocation.getData().setPosition(position);
+		}
+	}
+	
+    private LoaderManager.LoaderCallbacks<LocationRenderData> mTaskLoadLocationCallbacks =
+    		new LoaderManager.LoaderCallbacks<LocationRenderData>() {
+		@Override
+		public Loader<LocationRenderData> onCreateLoader(int id, Bundle args) {
+			return RenderLocation.createInstance(getContext(), args);
+		}
+		@Override
+		public void onLoadFinished(Loader<LocationRenderData> loader, LocationRenderData renderData) {
+			mLocation.setData(renderData);
+		}
+		@Override
+		public void onLoaderReset(Loader<LocationRenderData> loader) {
+			mLocation.getData().setPosition(null);
+		}
+    };
+
+    private float[] mTransformPt = new float[4];
+	@Override
+	public Point2D transform(Point2D pos, Point2D res) {
+		if (res == null)
+			res = new Point2D();
+		
+		mTransformPt[0] = (float)pos.x;
+		mTransformPt[1] = (float)pos.y;
+		mTransformPt[2] = 0.0f;
+		mTransformPt[3] = 1.0f;
+		
+		Matrix.multiplyMV(mTransformPt, 0, mTransform, OFFSET_RENDER, mTransformPt, 0);
+		
+		res.x = mTransformPt[0];
+		res.y = mTransformPt[1];
+		
+		return res;
+	}
 }

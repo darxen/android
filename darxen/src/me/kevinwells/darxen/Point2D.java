@@ -1,6 +1,9 @@
 package me.kevinwells.darxen;
 
-public class Point2D {
+import android.os.Parcel;
+import android.os.Parcelable;
+
+public class Point2D implements Parcelable {
 
 	public double x;
 	public double y;
@@ -39,4 +42,33 @@ public class Point2D {
 	public double distanceTo(double x, double y) {
 		return Math.sqrt(Math.pow(x - this.x, 2) + Math.pow(y - this.y, 2));
 	}
+
+	@Override
+	public int describeContents() {
+		return 0;
+	}
+
+	@Override
+	public void writeToParcel(Parcel parcel, int flags) {
+		parcel.writeDouble(x);
+		parcel.writeDouble(y);
+	}
+
+	public Point2D(Parcel in) {
+		x = in.readDouble();
+		y = in.readDouble();
+	}
+	
+	public static final Parcelable.Creator<Point2D> CREATOR =
+			new Parcelable.Creator<Point2D>() {
+		@Override
+		public Point2D createFromParcel(Parcel source) {
+			return new Point2D(source);
+		}
+
+		@Override
+		public Point2D[] newArray(int size) {
+			return new Point2D[size];
+		}
+	};
 }
