@@ -18,10 +18,14 @@ public class ShapefileStatusAdapter extends TableAdapter {
 	
 	public boolean hasCache(ShapefileId shapefile) {
 		Cursor cursor = getCached(shapefile);
-		if (cursor.getCount() == 0)
+		if (cursor.getCount() == 0) {
+			cursor.close();
 			return false;
+		}
 		cursor.moveToFirst();
-		return getBoolean(cursor, cursor.getColumnIndex(KEY_CACHED));
+		boolean res = getBoolean(cursor, cursor.getColumnIndex(KEY_CACHED));
+		cursor.close();
+		return res;
 	}
 	
 	public void setIsCached(ShapefileId shapefile, boolean cached) {

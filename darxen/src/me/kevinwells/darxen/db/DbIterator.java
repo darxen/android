@@ -40,6 +40,9 @@ public abstract class DbIterator<T> implements Iterable<T>, Iterator<T> {
 	 */
 	@Override
 	public boolean hasNext() {
+		if (cursor == null)
+			return false;
+		
 		return cursor.getPosition() < cursor.getCount() - 1;
 	}
 
@@ -47,9 +50,16 @@ public abstract class DbIterator<T> implements Iterable<T>, Iterator<T> {
 	public T next() {
 		cursor.moveToNext();
 		T res = convertRow(cursor);
-		if (cursor.isLast())
-			cursor.close();
 		return res;
+	}
+	
+	public void close() {
+		if (cursor == null) {
+			return;
+		}
+		
+		cursor.close();
+		cursor = null;
 	}
 	
 	/**

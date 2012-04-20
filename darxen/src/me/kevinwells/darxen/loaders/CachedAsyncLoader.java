@@ -1,7 +1,10 @@
 package me.kevinwells.darxen.loaders;
 
+import me.kevinwells.darxen.C;
+import me.kevinwells.darxen.MyApplication;
 import android.content.Context;
 import android.support.v4.content.AsyncTaskLoader;
+import android.util.Log;
 
 public abstract class CachedAsyncLoader<D> extends AsyncTaskLoader<D> {
 	
@@ -23,7 +26,16 @@ public abstract class CachedAsyncLoader<D> extends AsyncTaskLoader<D> {
 
 	@Override
 	public D loadInBackground() {
-		return doInBackground();
+		if (MyApplication.DEBUG) {
+			try {
+				return doInBackground();
+			} catch (RuntimeException ex) {
+				Log.e(C.TAG, "Unhandled exception in loader", ex);
+				throw ex;
+			}
+		} else {
+			return doInBackground();
+		}
 	}
 	
 	/**

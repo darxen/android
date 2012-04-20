@@ -89,8 +89,6 @@ public class LoadShapefile extends CachedAsyncLoader<ShapefileRenderData> {
 		//ensure we have cached bounding information for this shapefile
 		buildCache();
 
-		ShapefileObjectsAdapter adapter = new ShapefileObjectsAdapter();
-
 		LatLon viewpoint = getViewpoint();
 
 		ShapefileObjectBounds bounds;
@@ -104,17 +102,19 @@ public class LoadShapefile extends CachedAsyncLoader<ShapefileRenderData> {
 		InputStream fShx = resources.openRawResource(mConfig.resShx);
 		
 		Shapefile shapefile = new Shapefile(fShp, fShx);
+		ShapefileObjectsAdapter adapter = new ShapefileObjectsAdapter();
 		adapter.open();
 		try {
 			DbIterator<Integer> ids;
 			if (mPrevBounds == null) {
 				ids = adapter.getBoundedObjects(mConfig.id, bounds);
 			} else {
-				ids = adapter.getExcludedObjects(mConfig.id, mPrevBounds, bounds);
+				DbIterator<Integer> excludedIds = adapter.getExcludedObjects(mConfig.id, mPrevBounds, bounds);
 				
-				for (int id : ids) {
+				for (int id : excludedIds) {
 					mData.remove(id);
 				}
+				excludedIds.close();
 				
 				ids = adapter.getIncludedObjects(mConfig.id, mPrevBounds, bounds);
 			}
@@ -127,6 +127,7 @@ public class LoadShapefile extends CachedAsyncLoader<ShapefileRenderData> {
 				obj.load();
 				mData.add(id, generateObject(obj));
 			}
+			ids.close();
 			
 			mPrevBounds = bounds;
 			
@@ -149,47 +150,49 @@ public class LoadShapefile extends CachedAsyncLoader<ShapefileRenderData> {
 	private void buildCache() {
 		ShapefileObjectsAdapter adapter = new ShapefileObjectsAdapter();
 		adapter.open();
-		
-		if (adapter.hasCache(mConfig.id)) {
-			adapter.close();
-			return;
-		}
-		
-		Log.i(C.TAG, "Building cache for shapefile " + mConfig.id);
-		adapter.purgeCache(mConfig.id);
-		
-		Resources resources = getContext().getResources();
-		
-		InputStream fShp = resources.openRawResource(mConfig.resShp);
-		InputStream fShx = resources.openRawResource(mConfig.resShx);
-		
-		Shapefile shapefile = new Shapefile(fShp, fShx);
-		
-		adapter.startTransaction();
 		try {
-			for (int i = 0; i < shapefile.getShapeCount(); i++) {
-				ShapefileObject obj = shapefile.get(i);
-				
-				ShapefileObjectBounds bounds = new ShapefileObjectBounds(obj.dfXMin, obj.dfXMax, obj.dfYMin, obj.dfYMax);
-				adapter.addBounds(mConfig.id, i, bounds);
-				obj.close();
+		
+			if (adapter.hasCache(mConfig.id)) {
+				return;
 			}
 			
-			adapter.setIsCached(mConfig.id);
-		
-			adapter.commitTransaction();
+			Log.i(C.TAG, "Building cache for shapefile " + mConfig.id);
+			adapter.purgeCache(mConfig.id);
+			
+			Resources resources = getContext().getResources();
+			
+			InputStream fShp = resources.openRawResource(mConfig.resShp);
+			InputStream fShx = resources.openRawResource(mConfig.resShx);
+			
+			Shapefile shapefile = new Shapefile(fShp, fShx);
+			
+			adapter.startTransaction();
+			try {
+				for (int i = 0; i < shapefile.getShapeCount(); i++) {
+					ShapefileObject obj = shapefile.get(i);
+					
+					ShapefileObjectBounds bounds = new ShapefileObjectBounds(obj.dfXMin, obj.dfXMax, obj.dfYMin, obj.dfYMax);
+					adapter.addBounds(mConfig.id, i, bounds);
+					obj.close();
+				}
+				
+				adapter.setIsCached(mConfig.id);
+			
+				adapter.commitTransaction();
+			} finally {
+				shapefile.close();
+				
+				try {
+					fShp.close();
+				} catch (IOException e) {}
+	
+				try {
+					fShx.close();
+				} catch (IOException e) {}
+				
+				adapter.finishTransaction();
+			}
 		} finally {
-			shapefile.close();
-			
-			try {
-				fShp.close();
-			} catch (IOException e) {}
-
-			try {
-				fShx.close();
-			} catch (IOException e) {}
-			
-			adapter.finishTransaction();
 			adapter.close();
 		}
 	}

@@ -27,6 +27,7 @@ public class ShapefileObjectsAdapter extends TableAdapter {
 	
 	@Override
 	public void close() {
+		mStatusAdapter.close();
 		mStatusAdapter = null;
 		super.close();
 	}

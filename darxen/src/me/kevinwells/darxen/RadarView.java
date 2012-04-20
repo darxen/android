@@ -65,13 +65,14 @@ public class RadarView extends GLSurfaceView implements GLSurfaceView.Renderer, 
 		setRenderer(this);
 		Matrix.setIdentityM(mTransform, OFFSET_CURRENT);
 		scale(1.0f/230.0f);
-		updateRenderTransform();
 	}
 
 	public synchronized void setData(DataFile data) {
 		if (mData == null) {
 			//set the initial transform
-			Matrix.setIdentityM(mTransform, OFFSET_CURRENT);
+			synchronized (mTransform) {
+				Matrix.setIdentityM(mTransform, OFFSET_CURRENT);
+			}
 			RadialDataPacket packet = (RadialDataPacket)data.description.symbologyBlock.packets[0];
 			scale(1.0f/packet.rangeBinCount);
 		}
@@ -92,6 +93,21 @@ public class RadarView extends GLSurfaceView implements GLSurfaceView.Renderer, 
 		mCenter = center;
 	}
 	
+	public void setLocation(LatLon pos) {
+		updateLocation(pos);
+	}
+	
+	private void updateLocation(LatLon pos) {
+		if (mCenter == null || pos == null) {
+			loadLocation(null);
+			
+		} else {
+			Point2D p = null;
+			p = pos.project(mCenter, null);
+			loadLocation(p);
+		}
+	}
+
 	public synchronized void addUnderlay(Renderable layer) {
 		mBackground.add(layer);
 	}
@@ -129,12 +145,6 @@ public class RadarView extends GLSurfaceView implements GLSurfaceView.Renderer, 
 	@Override
 	public void onTouchUpdate() {
 		updateViewpoint();
-		updateRenderTransform();
-	}
-	
-	private synchronized void updateRenderTransform() {
-		for (int i = 0; i < 16; i++)
-			mTransform[OFFSET_RENDER+i] = mTransform[OFFSET_CURRENT+i];
 	}
 	
 	private void updateViewpoint() {
@@ -154,29 +164,20 @@ public class RadarView extends GLSurfaceView implements GLSurfaceView.Renderer, 
 			mViewpointListener.onViewpointChanged(viewpoint);
 		}
 	}
-	
-	public synchronized void setLocation(LatLon pos) {
-		updateLocation(pos);
-	}
-	
-	private void updateLocation(LatLon pos) {
-		if (mCenter == null || pos == null) {
-			loadLocation(null);
-			
-		} else {
-			Point2D p = null;
-			p = pos.project(mCenter, null);
-			loadLocation(p);			
-		}
-	}
-	
+
 	@Override
 	public boolean onTouchEvent(MotionEvent e) {
-		return mRecognizer.onTouchEvent(e);
+		synchronized (mTransform) {
+			return mRecognizer.onTouchEvent(e);
+		}
 	}
 
 	@Override
 	public synchronized void onDrawFrame(GL10 gl) {
+		synchronized (mTransform) {
+			for (int i = 0; i < 16; i++)
+				mTransform[OFFSET_RENDER+i] = mTransform[OFFSET_CURRENT+i];
+		}
 		
 		gl.glClear(GL10.GL_COLOR_BUFFER_BIT);
 		gl.glLoadIdentity();
@@ -234,6 +235,8 @@ public class RadarView extends GLSurfaceView implements GLSurfaceView.Renderer, 
 		gl.glMatrixMode(GL10.GL_PROJECTION);
 		gl.glPopMatrix();
 		gl.glMatrixMode(GL10.GL_MODELVIEW);
+		
+		notifyAll();
 	}
 
 	@Override

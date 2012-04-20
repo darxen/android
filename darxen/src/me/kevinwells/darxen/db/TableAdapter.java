@@ -8,6 +8,9 @@ import android.database.sqlite.SQLiteOpenHelper;
 public abstract class TableAdapter {
 
 	private SQLiteOpenHelper mDbManager;
+	
+	private static Object mRefCountSync = new Object();
+	private static RefCount mRefCount;
 
 	/** Shared db connection */
 	protected SQLiteDatabase db;
@@ -17,6 +20,12 @@ public abstract class TableAdapter {
 	 */
 	public TableAdapter() {
 		mDbManager = DatabaseManager.getInstance();
+		
+		synchronized (mRefCountSync) {
+			if (mRefCount == null) {
+				mRefCount = new RefCount(mDbManager);
+			}
+		}
 	}
 
 	/**
@@ -26,13 +35,22 @@ public abstract class TableAdapter {
 	 */
 	public TableAdapter(SQLiteDatabase db) {
 		this.db = db;
+		mRefCount.ref();
+	}
+	
+	@Override
+	protected void finalize() throws Throwable {
+		if (db != null)
+			throw new RuntimeException("TableAdapter was not closed");
+		super.finalize();
 	}
 
 	/**
 	 * Open a writable version of the database
 	 */
 	public void open() {
-		db = mDbManager.getWritableDatabase();
+		assert(db == null);
+		db = mRefCount.ref();
 	}
 
 	/**
@@ -42,7 +60,10 @@ public abstract class TableAdapter {
 	 * connection to the database.
 	 */
 	public void close() {
+		assert(db != null);
 		db = null;
+		
+		mRefCount.deref();
 	}
 	
 	public void startTransaction() {
@@ -67,7 +88,6 @@ public abstract class TableAdapter {
 		assert (cursor.getColumnCount() == 1);
 		assert (cursor.getCount() == 1);
 		cursor.moveToFirst();
-		cursor.close();
 		return cursor.getString(0);
 	}
 
@@ -81,7 +101,34 @@ public abstract class TableAdapter {
 	protected boolean getBoolean(Cursor cursor, int column) {
 		int val = cursor.getInt(column);
 		assert (val == 0 || val == 1);
-		cursor.close();
 		return val == 1;
+	}
+	
+	private static class RefCount {
+		
+		private int mCount;
+		private SQLiteOpenHelper mDbManager;
+		
+		public RefCount(SQLiteOpenHelper dbManager) {
+			mCount = 0;
+			mDbManager = dbManager;
+		}
+		
+		public synchronized SQLiteDatabase ref() {
+			mCount++;
+			//Log.d(C.TAG, "Increment ref count to " + mCount);
+			return mDbManager.getWritableDatabase();
+		}
+		
+		public synchronized SQLiteDatabase deref() {
+			mCount--;
+			//Log.d(C.TAG, "Decrement ref count to " + mCount);
+			assert (mCount >= 0);
+			
+			if (mCount == 0) {
+				mDbManager.close();
+			}
+			return null;
+		}
 	}
 }
