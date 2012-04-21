@@ -4,6 +4,8 @@ import java.io.IOException;
 
 public class RadialDataPacket extends Packet {
 
+	private static final long serialVersionUID = 3606054321889213810L;
+
 	public short firstRangeBin;
 	public short rangeBinCount;
 	public short centerSweepI;

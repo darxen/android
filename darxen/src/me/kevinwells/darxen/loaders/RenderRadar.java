@@ -22,13 +22,13 @@ public class RenderRadar extends CachedAsyncLoader<RadarRenderData> {
 	
 	public static Bundle bundleArgs(DataFile file, RadarRenderData data) {
 		Bundle args = new Bundle();
-		args.putParcelable(ARG_DATA_FILE, file);
+		args.putSerializable(ARG_DATA_FILE, file);
 		args.putParcelable(ARG_DATA, data);
 		return args;
 	}
 	
 	public static RenderRadar createInstance(Context context, Bundle args) {
-		DataFile file = args.getParcelable(ARG_DATA_FILE);
+		DataFile file = (DataFile)args.getSerializable(ARG_DATA_FILE);
 		RadarRenderData data = args.getParcelable(ARG_DATA);
 		return new RenderRadar(context, file, data);
 	}

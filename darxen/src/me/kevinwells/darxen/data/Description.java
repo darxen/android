@@ -1,12 +1,12 @@
 package me.kevinwells.darxen.data;
 
 import java.io.IOException;
+import java.io.Serializable;
 import java.util.HashMap;
 
-import android.os.Parcel;
-import android.os.Parcelable;
-
-public class Description implements Parcelable {
+public class Description implements Serializable {
+	
+	private static final long serialVersionUID = 5398520238014480987L;
 	
 	public float lat;
 	public float lon;
@@ -100,35 +100,4 @@ public class Description implements Parcelable {
 			return types.get(ordinal);
 		}
 	}
-
-	@Override
-	public int describeContents() {
-		return 0;
-	}
-
-	@Override
-	public void writeToParcel(Parcel dest, int flags) {
-		dest.writeFloat(lat);
-		dest.writeFloat(lon);
-		dest.writeInt(opmode.ordinal());
-		//SymbologyBlock
-	}
-	
-	public Description(Parcel in) {
-		lat = in.readFloat();
-		lon = in.readFloat();
-		opmode = OpMode.fromOrdinal(in.readInt());
-	}
-
-	public static final Parcelable.Creator<Description> CREATOR = 
-			new Parcelable.Creator<Description>() {
-		@Override
-		public Description createFromParcel(Parcel source) {
-			return new Description(source);
-		}
-		@Override
-		public Description[] newArray(int size) {
-			return new Description[size];
-		}
-	};
 }

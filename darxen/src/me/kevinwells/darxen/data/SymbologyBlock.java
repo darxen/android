@@ -1,8 +1,11 @@
 package me.kevinwells.darxen.data;
 
 import java.io.IOException;
+import java.io.Serializable;
 
-public class SymbologyBlock {
+public class SymbologyBlock implements Serializable {
+	
+	private static final long serialVersionUID = 301037074749829362L;
 	
 	public short layerCount;
 	public short[] packetCodes;

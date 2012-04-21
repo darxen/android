@@ -1,12 +1,12 @@
 package me.kevinwells.darxen.data;
 
 import java.io.IOException;
+import java.io.Serializable;
 
-import android.os.Parcel;
-import android.os.Parcelable;
+public class DataFile implements Serializable {
 
-public class DataFile implements Parcelable {
-	
+	private static final long serialVersionUID = -507221418483805389L;
+
 	public byte[] header;
 	
 	public MessageHeader messageHeader;
@@ -40,33 +40,4 @@ public class DataFile implements Parcelable {
 		
 		return false;
 	}
-
-	@Override
-	public int describeContents() {
-		return 0;
-	}
-
-	@Override
-	public void writeToParcel(Parcel dest, int flags) {
-		dest.writeByteArray(header);
-		//MessageHeader
-		dest.writeParcelable(description, flags);
-	}
-	
-	public DataFile(Parcel in) {
-		header = in.createByteArray();
-		description = in.readParcelable(Description.class.getClassLoader());
-	}
-
-	public static final Parcelable.Creator<DataFile> CREATOR = 
-			new Parcelable.Creator<DataFile>() {
-		@Override
-		public DataFile createFromParcel(Parcel source) {
-			return new DataFile(source);
-		}
-		@Override
-		public DataFile[] newArray(int size) {
-			return new DataFile[size];
-		}
-	};
 }

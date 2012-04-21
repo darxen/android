@@ -19,13 +19,13 @@ public class RenderLegend extends CachedAsyncLoader<LegendRenderData> {
 	
 	public static Bundle bundleArgs(DataFile file, LegendRenderData data) {
 		Bundle args = new Bundle();
-		args.putParcelable(ARG_DATA_FILE, file);
+		args.putSerializable(ARG_DATA_FILE, file);
 		args.putParcelable(ARG_DATA, data);
 		return args;
 	}
 	
 	public static RenderLegend createInstance(Context context, Bundle args) {
-		DataFile file = args.getParcelable(ARG_DATA_FILE);
+		DataFile file = (DataFile)args.getSerializable(ARG_DATA_FILE);
 		LegendRenderData data = args.getParcelable(ARG_DATA);
 		return new RenderLegend(context, file, data);
 	}

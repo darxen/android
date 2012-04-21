@@ -1,8 +1,11 @@
 package me.kevinwells.darxen.data;
 
 import java.io.IOException;
+import java.io.Serializable;
 
-public class MessageHeader {
+public class MessageHeader implements Serializable {
+
+	private static final long serialVersionUID = 4479128695856022253L;
 
 	@SuppressWarnings("unused")
 	public static MessageHeader parse(DataFileStream stream) throws ParseException, IOException {
