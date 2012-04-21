@@ -1,8 +1,16 @@
 package me.kevinwells.darxen.db;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+
+import me.kevinwells.darxen.C;
 import android.content.Context;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
+import android.util.Log;
 
 public class DatabaseManager extends SQLiteOpenHelper {
 	
@@ -19,6 +27,8 @@ public class DatabaseManager extends SQLiteOpenHelper {
 		instance = new DatabaseManager(context.getApplicationContext(), DATABASE_NAME);
 		return instance;
 	}
+	
+	private Context mContext;
 	
 	/**
 	 * Retrieves the instance of DatabaseManager
@@ -53,16 +63,55 @@ public class DatabaseManager extends SQLiteOpenHelper {
 	
 	private DatabaseManager(Context context, String dbName) {
 		super(context, dbName, null, DATABASE_VERSION);
+		mContext = context;
+	}
+	
+	private static final String DB_PATH = "/data/data/me.kevinwells.darxen/databases/";
+	private static final String DB_NAME = "darxen.db";
+	
+	private boolean dbExists() {
+		File f = new File(DB_PATH + DB_NAME);
+		return f.exists() && f.length() > 0;
+	}
+
+	@Override
+	public synchronized SQLiteDatabase getWritableDatabase() {
+		if (!dbExists()) {
+			try {
+				Log.i(C.TAG, "Copying prepopulated database");
+				File f = new File(DB_PATH);
+				if (!f.exists())
+					f.mkdir();
+				
+				InputStream fin = mContext.getAssets().open("darxen.db");
+				OutputStream fout = new FileOutputStream(DB_PATH + DB_NAME);
+				
+				byte[] buffer = new byte[4096];
+				for (int count = fin.read(buffer); count != -1; count = fin.read(buffer))
+					fout.write(buffer, 0, count);
+				
+				fout.close();
+				fin.close();
+				
+			} catch (IOException e) {
+				Log.e(C.TAG, "Failed to copy prepopulated database", e);
+			}
+		}
+		
+		return super.getWritableDatabase();
 	}
 
 	@Override
 	public void onCreate(SQLiteDatabase db) {
+		Log.d(C.TAG, "Creating a new database");
 		db.execSQL(CREATE_TABLE_SHAPEFILE_STATUS);
 		db.execSQL(CREATE_TABLE_SHAPEFILE_OBJECTS);
 	}
 
 	@Override
 	public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
+		Log.d(C.TAG, "Upgrading an existing database");
+		
 		db.execSQL("DROP TABLE IF EXISTS " + TABLE_SHAPEFILE_OBJECTS);
 		db.execSQL("DROP TABLE IF EXISTS " + TABLE_SHAPEFILE_STATUS);
 		
