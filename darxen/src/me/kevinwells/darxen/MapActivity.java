@@ -12,6 +12,8 @@ import me.kevinwells.darxen.loaders.LoadRadar;
 import me.kevinwells.darxen.loaders.LoadShapefile;
 import me.kevinwells.darxen.loaders.LoadSites;
 import me.kevinwells.darxen.model.Color;
+import me.kevinwells.darxen.model.RenderData;
+import me.kevinwells.darxen.model.RenderModel;
 import me.kevinwells.darxen.model.ShapefileConfig;
 import me.kevinwells.darxen.model.ShapefileId;
 import me.kevinwells.darxen.renderables.LinearShapefileRenderable;
@@ -44,6 +46,7 @@ public class MapActivity extends SherlockFragmentActivity {
 	
 	private TextView mTitle;
 	private RadarView mRadarView;
+	private RenderModel mModel;
     private LocationManager locationManager;
     private LocationListener locationListener;
     
@@ -70,13 +73,13 @@ public class MapActivity extends SherlockFragmentActivity {
         setContentView(R.layout.main);
         
         mRadarView = new RadarView(this, getSupportLoaderManager());
+        mModel = mRadarView.getModel();
         ((FrameLayout)findViewById(R.id.container)).addView(mRadarView);
         
         mTitle = (TextView)findViewById(R.id.title);
         
         Prefs.unsetLastUpdateTime();
         
-        //TODO load cached site from shared prefs
         loadSites();
     }
     
@@ -240,7 +243,9 @@ public class MapActivity extends SherlockFragmentActivity {
 		@Override
 		public void onLoadFinished(Loader<RadarSite> loader, RadarSite radarSite) {
 			mRadarSite = radarSite;
-			mRadarView.setCenter(mRadarSite.center);
+			RenderData data = mModel.getWritable();
+			data.setCenter(mRadarSite.center);
+			mModel.commit();
 			
 			loadRadar();
 	        loadShapefiles(radarSite.center);
@@ -276,7 +281,7 @@ public class MapActivity extends SherlockFragmentActivity {
 
 	        mTitle.setText(new String(data.header).replace("\n", ""));
 			
-			mRadarView.setData(data);
+			mRadarView.setDataFile(data);
 			
 			setSupportProgressBarIndeterminateVisibility(false);
 			
@@ -284,15 +289,17 @@ public class MapActivity extends SherlockFragmentActivity {
 		}
 		@Override
 		public void onLoaderReset(Loader<DataFile> loader) {
-			mRadarView.setData(null);
+			mRadarView.setDataFile(null);
 		}
     };
     
     private void loadShapefiles(LatLon center) {
     	if (mShapefiles != null) {
     		for (ShapefileInfo info : mShapefiles) {
-				mRadarView.removeUnderlay(info.mUnderlay);
-				mRadarView.removeOverlay(info.mOverlay);
+    			RenderData data = mModel.getWritable();
+    			data.removeUnderlay(info.mUnderlay);
+    			data.removeOverlay(info.mOverlay);
+    			mModel.commit();
 			}
     	}
 	
@@ -322,8 +329,11 @@ public class MapActivity extends SherlockFragmentActivity {
     		
     		LinearShapefileRenderable underlay = new LinearShapefileRenderable(model, info.mUnderlayRenderConfig);
     		LinearShapefileRenderable overlay = new LinearShapefileRenderable(model, info.mOverlayRenderConfig);
-    		mRadarView.addUnderlay(underlay);
-    		mRadarView.addOverlay(overlay);
+
+			RenderData data = mModel.getWritable();
+			data.addUnderlay(underlay);
+			data.addOverlay(overlay);
+			mModel.commit();
     		info.mUnderlay = underlay;
     		info.mOverlay = overlay;
     		
@@ -378,9 +388,11 @@ public class MapActivity extends SherlockFragmentActivity {
 		public void onLoaderReset(Loader<ShapefileRenderData> loader) {
 			int index = loader.getId() - TASK_LOAD_SHAPEFILES;
 			ShapefileInfo info = mShapefiles.get(index);
-			
-			mRadarView.removeUnderlay(info.mUnderlay);
-			mRadarView.removeUnderlay(info.mOverlay);
+
+			RenderData data = mModel.getWritable();
+			data.removeUnderlay(info.mUnderlay);
+			data.removeOverlay(info.mOverlay);
+			mModel.commit();
 		}
     };
 
