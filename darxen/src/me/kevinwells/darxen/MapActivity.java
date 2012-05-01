@@ -12,6 +12,7 @@ import me.kevinwells.darxen.loaders.LoadRadar;
 import me.kevinwells.darxen.loaders.LoadShapefile;
 import me.kevinwells.darxen.loaders.LoadSites;
 import me.kevinwells.darxen.model.Color;
+import me.kevinwells.darxen.model.RadarDataModel;
 import me.kevinwells.darxen.model.RenderData;
 import me.kevinwells.darxen.model.RenderModel;
 import me.kevinwells.darxen.model.ShapefileConfig;
@@ -54,6 +55,7 @@ public class MapActivity extends SherlockFragmentActivity {
     private ArrayList<RadarSite> mRadarSites;
 	
     private RadarSite mRadarSite;
+    private RadarDataModel mRadarData;
     
     private static final int TASK_LOAD_SITES = 0;
     private static final int TASK_FIND_SITE = 1;
@@ -257,41 +259,63 @@ public class MapActivity extends SherlockFragmentActivity {
     };
 
 	private void loadRadar() {
-		Bundle args = LoadRadar.bundleArgs(mRadarSite);
+		if (mRadarData == null) {
+			mRadarData = new RadarDataModel();
+			mRadarData.setCallbacks(mRadarModelListener);
+		}
+		
+		Bundle args = LoadRadar.bundleArgs(mRadarSite, mRadarData);
 		getSupportLoaderManager().initLoader(TASK_LOAD_RADAR, args, mTaskLoadRadarCallbacks);
 	}
 	
 	private void reloadRadar() {
-		Bundle args = LoadRadar.bundleArgs(mRadarSite);
+		if (mRadarData == null) {
+			mRadarData = new RadarDataModel();
+			mRadarData.setCallbacks(mRadarModelListener);
+		}
+		
+		Bundle args = LoadRadar.bundleArgs(mRadarSite, mRadarData);
 		getSupportLoaderManager().restartLoader(TASK_LOAD_RADAR, args, mTaskLoadRadarCallbacks);
 	}
 	
-    private LoaderManager.LoaderCallbacks<DataFile> mTaskLoadRadarCallbacks =
-    		new LoaderManager.LoaderCallbacks<DataFile>() {
+    private LoaderManager.LoaderCallbacks<RadarDataModel> mTaskLoadRadarCallbacks =
+    		new LoaderManager.LoaderCallbacks<RadarDataModel>() {
 		@Override
-		public Loader<DataFile> onCreateLoader(int id, Bundle args) {
+		public Loader<RadarDataModel> onCreateLoader(int id, Bundle args) {
 			return LoadRadar.createInstance(MapActivity.this, args);
 		}
 		@Override
-		public void onLoadFinished(Loader<DataFile> loader, DataFile data) {
+		public void onLoadFinished(Loader<RadarDataModel> loader, RadarDataModel data) {
 			if (data == null) {
 				finish();
 				return;
 			}
-
-	        mTitle.setText(new String(data.header).replace("\n", ""));
 			
-			mRadarView.setDataFile(data);
+			if (data != mRadarData) {
+				mRadarData = data;
+				data.setCallbacks(mRadarModelListener);
+			}
 			
 			setSupportProgressBarIndeterminateVisibility(false);
 			
 			Prefs.setLastUpdateTime(new Date());
 		}
 		@Override
-		public void onLoaderReset(Loader<DataFile> loader) {
+		public void onLoaderReset(Loader<RadarDataModel> loader) {
 			mRadarView.setDataFile(null);
 		}
     };
+    
+    private RadarDataModel.RadarDataModelListener mRadarModelListener = new RadarDataModel.RadarDataModelListener() {
+		@Override
+		public void onUpdated() {
+			DataFile file = mRadarData.getLatestData();
+			
+			mTitle.setText(new String(file.header).replace("\n", ""));
+			
+			mRadarView.setDataFile(file);
+		}
+	};
     
     private void loadShapefiles(LatLon center) {
     	if (mShapefiles != null) {
