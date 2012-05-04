@@ -220,10 +220,11 @@ public class MapActivity extends SherlockFragmentActivity {
 		boolean initSite = mPosition == null;
 		Log.v(C.TAG, location.toString());
 		mPosition = new LatLon(location.getLatitude(), location.getLongitude());
-		mRadarView.setLocation(mPosition);
 		
 		if (initSite)
 			initSite();
+		
+		mRadarView.setLocation(mPosition);
 	}
 
     protected void onResume() {
@@ -342,6 +343,9 @@ public class MapActivity extends SherlockFragmentActivity {
 			
 			loadRadar();
 	        loadShapefiles(radarSite.center);
+	        
+	        if (mPosition != null)
+	        	mRadarView.setLocation(mPosition);
 		}
 		@Override
 		public void onLoaderReset(Loader<RadarSite> loader) {
