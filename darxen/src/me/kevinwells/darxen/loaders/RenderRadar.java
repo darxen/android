@@ -9,6 +9,7 @@ import me.kevinwells.darxen.data.RadialPacket;
 import me.kevinwells.darxen.model.Buffers;
 import me.kevinwells.darxen.model.Palette;
 import me.kevinwells.darxen.model.PaletteType;
+import me.kevinwells.darxen.model.RadarData;
 import me.kevinwells.darxen.model.RadarRenderData;
 import android.content.Context;
 import android.os.Bundle;
@@ -17,20 +18,17 @@ import android.support.v4.content.Loader;
 
 public class RenderRadar extends CachedAsyncLoader<RadarRenderData> {
 
-	private static final String ARG_DATA_FILE = "DataFile";
 	private static final String ARG_DATA = "Data";
 	
-	public static Bundle bundleArgs(DataFile file, RadarRenderData data) {
+	public static Bundle bundleArgs(RadarData data) {
 		Bundle args = new Bundle();
-		args.putSerializable(ARG_DATA_FILE, file);
 		args.putParcelable(ARG_DATA, data);
 		return args;
 	}
 	
 	public static RenderRadar createInstance(Context context, Bundle args) {
-		DataFile file = (DataFile)args.getSerializable(ARG_DATA_FILE);
-		RadarRenderData data = args.getParcelable(ARG_DATA);
-		return new RenderRadar(context, file, data);
+		RadarData data = args.getParcelable(ARG_DATA);
+		return new RenderRadar(context, data);
 	}
 
 	public static RenderRadar getInstance(LoaderManager manager, int id) {
@@ -38,57 +36,63 @@ public class RenderRadar extends CachedAsyncLoader<RadarRenderData> {
 		return (RenderRadar)res;
 	}
 	
-	private DataFile mFile;
-	private RadarRenderData mData;
+	private RadarData mData;
 	
-	private RenderRadar(Context context, DataFile file, RadarRenderData data) {
+	private RenderRadar(Context context, RadarData data) {
 		super(context);
-		mFile = file;
 		mData = data;
+	}
+	
+	public RadarData getData() {
+		return mData;
 	}
 
 	@Override
 	protected RadarRenderData doInBackground() {
 		
+		if (mData.getRadarRenderData() != null) {
+			return mData.getRadarRenderData();
+		}
+		
 		Thread.currentThread().setPriority(Thread.NORM_PRIORITY+2);
 		
-		if (mFile == null) {
-			mData.clear();
-			return mData;
+		DataFile file = mData.getDataFile();
+		RadarRenderData renderData = new RadarRenderData();
+		
+		//require a file to render
+		if (file == null) {
+			return renderData;
 		}
 		
-		if (mData.getPalette() == null) {
-			Palette palette;
+		//set the palette
+		renderData.setPalette(getPalette(file));
+		
+		//render the radial data
+		RadialDataPacket packet = (RadialDataPacket)file.description.symbologyBlock.packets[0];
+		renderRadialData(packet, renderData);
+		
+		//cache the result and return
+		mData.setRadarRenderData(renderData);
+		return renderData;
+	}
+	
+	private static Palette getPalette(DataFile file) {
+		switch (file.description.opmode) {
+		case PRECIPITATION:
+			return new Palette(PaletteType.REFLECTIVITY_PRECIPITATION);
 			
-			switch (mFile.description.opmode) {
-			case PRECIPITATION:
-				palette = new Palette(PaletteType.REFLECTIVITY_PRECIPITATION);
-				break;
-				
-			case CLEAN_AIR:
-				palette = new Palette(PaletteType.REFLECTIVITY_CLEAN_AIR);
-				break;
-				
-			case MAINTENANCE:
-				palette = new Palette(PaletteType.REFLECTIVITY_CLEAN_AIR);
-				break;
-				
-			default:
-				palette = new Palette(PaletteType.REFLECTIVITY_CLEAN_AIR);
-				break;
-			}
+		case CLEAN_AIR:
+			return new Palette(PaletteType.REFLECTIVITY_CLEAN_AIR);
 			
-			mData.setPalette(palette);
+		case MAINTENANCE:
+			return new Palette(PaletteType.REFLECTIVITY_CLEAN_AIR);
+			
+		default:
+			return new Palette(PaletteType.REFLECTIVITY_CLEAN_AIR);
 		}
-		
-		//FIXME not parcelable enough
-		RadialDataPacket packet = (RadialDataPacket)mFile.description.symbologyBlock.packets[0];
-		renderRadialData(packet);
-		
-		return mData;
 	}
 
-	private void renderRadialData(RadialDataPacket packet) {
+	private void renderRadialData(RadialDataPacket packet, RadarRenderData renderData) {
 		float kmPerRangeBin = 1.0f;
 		
 		FloatBuffer[] radialBuffers = new FloatBuffer[16];
@@ -138,7 +142,7 @@ public class RenderRadar extends CachedAsyncLoader<RadarRenderData> {
 			radialBuffers[i] = buffer.getBuffer();
 			radialSizes[i] = buffer.size();
 		}
-		mData.setBuffers(radialBuffers, radialSizes);
+		renderData.setBuffers(radialBuffers, radialSizes);
 	}
 	
 	public class Vertex {

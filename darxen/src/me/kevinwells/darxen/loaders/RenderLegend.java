@@ -9,73 +9,91 @@ import me.kevinwells.darxen.model.Color;
 import me.kevinwells.darxen.model.LegendRenderData;
 import me.kevinwells.darxen.model.Palette;
 import me.kevinwells.darxen.model.PaletteType;
+import me.kevinwells.darxen.model.RadarData;
 import android.content.Context;
 import android.os.Bundle;
+import android.support.v4.app.LoaderManager;
+import android.support.v4.content.Loader;
 
 public class RenderLegend extends CachedAsyncLoader<LegendRenderData> {
 
-	private static final String ARG_DATA_FILE = "DataFile";
 	private static final String ARG_DATA = "Data";
 	
-	public static Bundle bundleArgs(DataFile file, LegendRenderData data) {
+	public static Bundle bundleArgs(RadarData data) {
 		Bundle args = new Bundle();
-		args.putSerializable(ARG_DATA_FILE, file);
 		args.putParcelable(ARG_DATA, data);
 		return args;
 	}
 	
 	public static RenderLegend createInstance(Context context, Bundle args) {
-		DataFile file = (DataFile)args.getSerializable(ARG_DATA_FILE);
-		LegendRenderData data = args.getParcelable(ARG_DATA);
-		return new RenderLegend(context, file, data);
+		RadarData data = args.getParcelable(ARG_DATA);
+		return new RenderLegend(context, data);
 	}
 	
-	private DataFile mFile;
-	private LegendRenderData mData;
+	public static RenderLegend getInstance(LoaderManager manager, int id) {
+		Loader<LegendRenderData> res = manager.getLoader(id);
+		return (RenderLegend)res;
+	}
 	
-	private RenderLegend(Context context, DataFile file, LegendRenderData data) {
+	private RadarData mData;
+	
+	private RenderLegend(Context context, RadarData data) {
 		super(context);
-		mFile = file;
 		mData = data;
+	}
+	
+	public RadarData getData() {
+		return mData;
 	}
 
 	@Override
 	protected LegendRenderData doInBackground() {
 		
-		if (mData.getPalette() == null) {
-			Palette palette;
-			
-			switch (mFile.description.opmode) {
-			case PRECIPITATION:
-				palette = new Palette(PaletteType.REFLECTIVITY_PRECIPITATION);
-				break;
-				
-			case CLEAN_AIR:
-				palette = new Palette(PaletteType.REFLECTIVITY_CLEAN_AIR);
-				break;
-				
-			case MAINTENANCE:
-				palette = new Palette(PaletteType.REFLECTIVITY_CLEAN_AIR);
-				break;
-				
-			default:
-				palette = new Palette(PaletteType.REFLECTIVITY_CLEAN_AIR);
-				break;
-			}
-			
-			mData.setPalette(palette);
+		if (mData.getLegendRenderData() != null) {
+			return mData.getLegendRenderData();
 		}
 		
-		render(mData.getPalette());
+		DataFile file = mData.getDataFile();
+		LegendRenderData renderData = new LegendRenderData();
 		
-		return mData;
+		//require a file to render
+		if (file == null) {
+			return renderData;
+		}
+	
+		//set the palette
+		Palette palette = getPalette(file);
+		renderData.setPalette(palette);
+		
+		//render the legend
+		render(palette, renderData);
+		
+		//cache the result and return
+		mData.setLegendRenderData(renderData);
+		return renderData;
+	}
+	
+	private static Palette getPalette(DataFile file) {
+		switch (file.description.opmode) {
+		case PRECIPITATION:
+			return new Palette(PaletteType.REFLECTIVITY_PRECIPITATION);
+			
+		case CLEAN_AIR:
+			return new Palette(PaletteType.REFLECTIVITY_CLEAN_AIR);
+			
+		case MAINTENANCE:
+			return new Palette(PaletteType.REFLECTIVITY_CLEAN_AIR);
+			
+		default:
+			return new Palette(PaletteType.REFLECTIVITY_CLEAN_AIR);
+		}
 	}
 	
 	private static final float BORDER = 0.005f;
 	private static final float WIDTH = 0.7f;
 	private static final float HEIGHT = 0.05f;
 	
-	private void render(Palette palette) {
+	private void render(Palette palette, LegendRenderData renderData) {
 		RectangleBuffer buffer = new RectangleBuffer();
 		
 		buffer.addRectangle(new Vertex(0.0f, 0.0f), new Vertex(WIDTH, HEIGHT), new Color(0.0f, 0.0f, 0.0f, 1.0f));
@@ -93,7 +111,7 @@ public class RenderLegend extends CachedAsyncLoader<LegendRenderData> {
 			Vertex v2 = new Vertex(xEnd, HEIGHT-BORDER);
 			buffer.addRectangle(v1, v2, c);
 		}
-		mData.setBuffers(buffer.getVertBuffer(), buffer.getColorBuffer(), buffer.size());
+		renderData.setBuffers(buffer.getVertBuffer(), buffer.getColorBuffer(), buffer.size());
 	}
 	
 	public class Vertex {

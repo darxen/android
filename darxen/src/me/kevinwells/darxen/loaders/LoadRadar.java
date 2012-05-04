@@ -15,6 +15,7 @@ import me.kevinwells.darxen.RadarSite;
 import me.kevinwells.darxen.data.DataFile;
 import me.kevinwells.darxen.data.Level3Parser;
 import me.kevinwells.darxen.data.ParseException;
+import me.kevinwells.darxen.model.RadarData;
 import me.kevinwells.darxen.model.RadarDataModel;
 
 import org.apache.commons.net.ftp.FTP;
@@ -127,7 +128,7 @@ public class LoadRadar extends CachedAsyncLoader<RadarDataModel> {
 				}
 		        
 		        //store the data
-		        mModel.addDataFile(time, file);
+		        mModel.addDataFile(time, new RadarData(file));
 			}
 	        
 		} catch (InterruptedException ex) {

@@ -4,7 +4,6 @@ import java.util.Map.Entry;
 import java.util.TreeMap;
 
 import me.kevinwells.darxen.compat.CompatTreeMap;
-import me.kevinwells.darxen.data.DataFile;
 import android.os.Handler;
 import android.os.Parcel;
 import android.os.Parcelable;
@@ -18,7 +17,7 @@ public class RadarDataModel implements Parcelable {
 
 	private Handler mHandler = new Handler();
 	
-	private TreeMap<Long, DataFile> mFiles;
+	private TreeMap<Long, RadarData> mFiles;
 	private RadarDataModelListener mCallbacks;
 	
 	private long mCurrent;
@@ -26,7 +25,7 @@ public class RadarDataModel implements Parcelable {
 	private int mDataLimit;
 	
 	public RadarDataModel() {
-		mFiles = new CompatTreeMap<Long, DataFile>();
+		mFiles = new CompatTreeMap<Long, RadarData>();
 		mDataLimit = 15;
 	}
 	
@@ -41,7 +40,9 @@ public class RadarDataModel implements Parcelable {
 		return mDataLimit;
 	}
 	
-	public synchronized void addDataFile(long time, DataFile data) {
+	public synchronized void addDataFile(long time, RadarData data) {
+		boolean isLastCurrent = !hasNext();
+		
 		//add the record
 		mFiles.put(time, data);
 		
@@ -61,7 +62,7 @@ public class RadarDataModel implements Parcelable {
 		});
 		
 		//set the current frame
-		if (mCurrent == 0) {
+		if (mCurrent == 0 || (isLastCurrent && time > mCurrent)) {
 			mCurrent = time;
 			mHandler.post(new Runnable() {
 				@Override
@@ -82,11 +83,15 @@ public class RadarDataModel implements Parcelable {
 		return mFiles.size() >= mDataLimit;
 	}
 	
-	public synchronized DataFile getLatestData() {
-		return mFiles.get(mFiles.lastKey());
+	public synchronized RadarData getCurrentData() {
+		if (mCurrent == 0) {
+			return null;
+		}
+		
+		return mFiles.get(mCurrent);
 	}
 	
-	public synchronized DataFile getData(long time) {
+	public synchronized RadarData getData(long time) {
 		return mFiles.get(time);
 	}
 	
@@ -94,7 +99,10 @@ public class RadarDataModel implements Parcelable {
 		return mFiles.containsKey(time);
 	}
 
-	private long getPrevious(long time) {
+	private Long getPrevious(long time) {
+		if (mFiles.isEmpty())
+			return null;
+		
 		Long key = mFiles.lowerKey(time);
 		
 		if (key == null)
@@ -103,7 +111,10 @@ public class RadarDataModel implements Parcelable {
 		return key;
 	}
 
-	private long getNext(long time) {
+	private Long getNext(long time) {
+		if (mFiles.isEmpty())
+			return null;
+		
 		Long key = mFiles.higherKey(time);
 		
 		if (key == null)
@@ -113,11 +124,13 @@ public class RadarDataModel implements Parcelable {
 	}
 	
 	public synchronized boolean hasPrevious() {
-		return getPrevious(mCurrent) != mCurrent;
+		Long previous = getPrevious(mCurrent);
+		return previous != null && previous != mCurrent;
 	}
 	
 	public synchronized boolean hasNext() {
-		return getNext(mCurrent) != mCurrent;
+		Long next = getNext(mCurrent);
+		return next != null && next != mCurrent;
 	}
 	
 	private void postOnCurrentChanged() {
@@ -163,9 +176,9 @@ public class RadarDataModel implements Parcelable {
 			}
 			
 			if (hasNext()) {
-				mHandler.postDelayed(this, 1000);
+				mHandler.postDelayed(this, 250);
 			} else {
-				mHandler.postDelayed(this, 2000);
+				mHandler.postDelayed(this, 1000);
 			}
 		}
 	};
@@ -197,9 +210,9 @@ public class RadarDataModel implements Parcelable {
 		
 		int size = mFiles.size();
 		dest.writeInt(size);
-		for (Entry<Long, DataFile> entry : mFiles.entrySet()) {
+		for (Entry<Long, RadarData> entry : mFiles.entrySet()) {
 			dest.writeLong(entry.getKey());
-			dest.writeSerializable(entry.getValue());
+			dest.writeParcelable(entry.getValue(), flags);
 		}
 	}
 	
@@ -208,10 +221,10 @@ public class RadarDataModel implements Parcelable {
 		mDataLimit = in.readInt();
 		
 		int size = in.readInt();
-		mFiles = new CompatTreeMap<Long, DataFile>();
+		mFiles = new CompatTreeMap<Long, RadarData>();
 		for (int i = 0; i < size; i++) {
 			long key = in.readLong();
-			DataFile value = (DataFile)in.readSerializable();
+			RadarData value = in.readParcelable(RadarData.class.getClassLoader());
 			mFiles.put(key, value);
 		}
 	}

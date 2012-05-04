@@ -6,12 +6,12 @@ import java.util.List;
 
 import javax.microedition.khronos.opengles.GL10;
 
-import me.kevinwells.darxen.data.DataFile;
 import me.kevinwells.darxen.loaders.FindSite;
 import me.kevinwells.darxen.loaders.LoadRadar;
 import me.kevinwells.darxen.loaders.LoadShapefile;
 import me.kevinwells.darxen.loaders.LoadSites;
 import me.kevinwells.darxen.model.Color;
+import me.kevinwells.darxen.model.RadarData;
 import me.kevinwells.darxen.model.RadarDataModel;
 import me.kevinwells.darxen.model.RenderData;
 import me.kevinwells.darxen.model.RenderModel;
@@ -367,6 +367,8 @@ public class MapActivity extends SherlockFragmentActivity {
 		
 		Bundle args = LoadRadar.bundleArgs(mRadarSite, mRadarData);
 		getSupportLoaderManager().restartLoader(TASK_LOAD_RADAR, args, mTaskLoadRadarCallbacks);
+		
+		Prefs.setLastUpdateTime(new Date());
 	}
 	
     private LoaderManager.LoaderCallbacks<RadarDataModel> mTaskLoadRadarCallbacks =
@@ -387,9 +389,8 @@ public class MapActivity extends SherlockFragmentActivity {
 				data.setCallbacks(mRadarModelListener);
 			}
 			
+			updateCurrentFrame();
 			setSupportProgressBarIndeterminateVisibility(false);
-			
-			Prefs.setLastUpdateTime(new Date());
 		}
 		@Override
 		public void onLoaderReset(Loader<RadarDataModel> loader) {
@@ -397,20 +398,23 @@ public class MapActivity extends SherlockFragmentActivity {
 		}
     };
     
+    private void updateCurrentFrame() {
+		RadarData data = mRadarData.getCurrentData();
+		
+		mTitle.setText(new String(data.getDataFile().header).replace("\n", ""));
+		mRadarView.setDataFile(data);
+		
+		invalidateOptionsMenu();
+    }
+    
     private RadarDataModel.RadarDataModelListener mRadarModelListener = new RadarDataModel.RadarDataModelListener() {
 		@Override
 		public void onUpdated() {
 			invalidateOptionsMenu();
 		}
-
 		@Override
 		public void onCurrentChanged(long time) {
-			DataFile file = mRadarData.getData(time);
-			
-			mTitle.setText(new String(file.header).replace("\n", ""));
-			mRadarView.setDataFile(file);
-			
-			invalidateOptionsMenu();
+			updateCurrentFrame();
 		}
 	};
     

@@ -1,12 +1,12 @@
 package me.kevinwells.darxen;
 
-import me.kevinwells.darxen.data.DataFile;
 import me.kevinwells.darxen.data.RadialDataPacket;
 import me.kevinwells.darxen.loaders.RenderLegend;
 import me.kevinwells.darxen.loaders.RenderLocation;
 import me.kevinwells.darxen.loaders.RenderRadar;
 import me.kevinwells.darxen.model.LegendRenderData;
 import me.kevinwells.darxen.model.LocationRenderData;
+import me.kevinwells.darxen.model.RadarData;
 import me.kevinwells.darxen.model.RadarRenderData;
 import me.kevinwells.darxen.model.RenderData;
 import me.kevinwells.darxen.model.RenderModel;
@@ -25,7 +25,7 @@ public class RadarView extends GLSurfaceView implements GestureSurface {
 
 	private LoaderManager mLoaderManager;
 	
-	private DataFile mData;
+	private RadarData mData;
 	
 	private GestureRecognizer mRecognizer = new GestureRecognizer(this);
 
@@ -67,24 +67,21 @@ public class RadarView extends GLSurfaceView implements GestureSurface {
 		return mModel.getWritable();
 	}
 
-	public void setDataFile(DataFile data) {
-		if (mData == null) {
-			//set the initial transform
-			Matrix.setIdentityM(mTransform, OFFSET_CURRENT);
-			RadialDataPacket packet = (RadialDataPacket)data.description.symbologyBlock.packets[0];
-			scale(1.0f/packet.rangeBinCount);
+	public void setDataFile(RadarData data) {
+		if (mData == data) {
+			return;
 		}
 		
 		if (mData == null) {
-			mData = data;
-			loadRadar();
-			loadLegend();
-			
-		} else {
-			mData = data;
-			reloadRadar();
-			reloadLegend();
+			//set the initial transform
+			Matrix.setIdentityM(mTransform, OFFSET_CURRENT);
+			RadialDataPacket packet = (RadialDataPacket)data.getDataFile().description.symbologyBlock.packets[0];
+			scale(1.0f/packet.rangeBinCount);
 		}
+		
+		mData = data;
+		loadRadar();
+		loadLegend();
 	}
 	
 	public void setLocation(LatLon pos) {
@@ -160,27 +157,12 @@ public class RadarView extends GLSurfaceView implements GestureSurface {
 	}
 
 	private void loadRadar() {
-		RenderData data = getData();
-		
-		RadarRenderData renderData = new RadarRenderData();
-		if (data.mRadar == null) {
-			data.setRadar(new RadarRenderable(renderData));
-			mModel.commit();
-		}
-		Bundle args = RenderRadar.bundleArgs(mData, renderData);
+		Bundle args = RenderRadar.bundleArgs(mData);
 		mLoaderManager.initLoader(TASK_RENDER_RADAR, args, mTaskLoadRadarCallbacks);
-	}
-	
-	private void reloadRadar() {
-		RenderData data = getData();
-
-		RadarRenderData renderData = new RadarRenderData();
-		if (data.mRadar == null) {
-			data.setRadar(new RadarRenderable(renderData));
-			mModel.commit();
+		
+		if (RenderRadar.getInstance(mLoaderManager, TASK_RENDER_RADAR).getData() != mData) {
+			mLoaderManager.restartLoader(TASK_RENDER_RADAR, args, mTaskLoadRadarCallbacks);
 		}
-		Bundle args = RenderRadar.bundleArgs(mData, renderData);
-		mLoaderManager.restartLoader(TASK_RENDER_RADAR, args, mTaskLoadRadarCallbacks);
 	}
 	
     private LoaderManager.LoaderCallbacks<RadarRenderData> mTaskLoadRadarCallbacks =
@@ -191,7 +173,14 @@ public class RadarView extends GLSurfaceView implements GestureSurface {
 		}
 		@Override
 		public void onLoadFinished(Loader<RadarRenderData> loader, RadarRenderData renderData) {
-			getData().mRadar.setData(renderData);
+			RenderData data = getData();
+
+			if (data.mRadar == null) {
+				data.setRadar(new RadarRenderable(renderData));
+				mModel.commit();
+			} else {
+				data.mRadar.setData(renderData);
+			}
 		}
 		@Override
 		public void onLoaderReset(Loader<RadarRenderData> loader) {
@@ -200,27 +189,12 @@ public class RadarView extends GLSurfaceView implements GestureSurface {
     };
 	
 	private void loadLegend() {
-		RenderData data = getData();
-		
-		LegendRenderData renderData = new LegendRenderData();
-		if (data.mLegend == null) {
-			data.setLegend(new LegendRenderable(renderData));
-			mModel.commit();
-		}
-		Bundle args = RenderLegend.bundleArgs(mData, renderData);
+		Bundle args = RenderLegend.bundleArgs(mData);
 		mLoaderManager.initLoader(TASK_RENDER_LEGEND, args, mTaskLoadLegendCallbacks);
-	}
-	
-	private void reloadLegend() {
-		RenderData data = getData();
 		
-		LegendRenderData renderData = new LegendRenderData();
-		if (data.mLegend == null) {
-			data.setLegend(new LegendRenderable(renderData));
-			mModel.commit();
+		if (RenderLegend.getInstance(mLoaderManager, TASK_RENDER_LEGEND).getData() != mData) {
+			mLoaderManager.restartLoader(TASK_RENDER_LEGEND, args, mTaskLoadLegendCallbacks);	
 		}
-		Bundle args = RenderLegend.bundleArgs(mData, renderData);
-		mLoaderManager.restartLoader(TASK_RENDER_LEGEND, args, mTaskLoadLegendCallbacks);
 	}
 	
     private LoaderManager.LoaderCallbacks<LegendRenderData> mTaskLoadLegendCallbacks =
@@ -231,7 +205,14 @@ public class RadarView extends GLSurfaceView implements GestureSurface {
 		}
 		@Override
 		public void onLoadFinished(Loader<LegendRenderData> loader, LegendRenderData renderData) {
-			getData().mLegend.setData(renderData);
+			RenderData data = getData();
+			
+			if (data.mLegend == null) {
+				data.setLegend(new LegendRenderable(renderData));
+				mModel.commit();
+			} else {
+				data.mLegend.setData(renderData);	
+			}
 		}
 		@Override
 		public void onLoaderReset(Loader<LegendRenderData> loader) {
