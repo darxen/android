@@ -92,6 +92,9 @@ public class LoadRadar extends CachedAsyncLoader<RadarDataModel> {
 			
 			//Download the most recent files
 			for (int i = files.size() - 1; i > files.size() - Math.min(6, mModel.getDataLimit()); i--) {
+				if (Thread.interrupted())
+					return null;
+				
 				FTPFile ftpFile = files.get(i);
 				long time = ftpFile.getTimestamp().getTime().getTime();
 				if (mModel.hasDataFile(time)) {

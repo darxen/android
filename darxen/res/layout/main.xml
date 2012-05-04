@@ -1,17 +1,70 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="fill_parent"
-    android:layout_height="fill_parent"
-    android:orientation="vertical" >
+    android:layout_height="fill_parent" >
 
     <TextView
         android:id="@+id/title"
         android:layout_width="fill_parent"
-        android:layout_height="wrap_content" />
+        android:layout_height="wrap_content"
+        android:layout_alignParentTop="true" />
 
     <FrameLayout
         android:id="@+id/container"
         android:layout_width="fill_parent"
-        android:layout_height="fill_parent" />
+        android:layout_height="wrap_content"
+        android:layout_above="@+id/animation"
+        android:layout_below="@id/title" >
+    </FrameLayout>
 
-</LinearLayout>
+    <LinearLayout
+        android:id="@id/animation"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:background="@drawable/abs__ab_bottom_solid_dark_holo"
+        android:gravity="center"
+        android:visibility="gone" >
+
+        <me.kevinwells.darxen.view.ActionItem
+            android:id="@+id/btnFirst"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:contentDescription="@string/frame_first"
+            android:src="@drawable/action_first" />
+
+        <me.kevinwells.darxen.view.ActionItem
+            android:id="@+id/btnPrevious"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:contentDescription="@string/frame_previous"
+            android:src="@drawable/action_previous" />
+
+        <me.kevinwells.darxen.view.ActionItem
+            android:id="@+id/btnPlay"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:contentDescription="@string/frame_play_pause"
+            android:src="@drawable/action_play" />
+
+        <me.kevinwells.darxen.view.ActionItem
+            android:id="@+id/btnNext"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:contentDescription="@string/frame_next"
+            android:src="@drawable/action_next" />
+
+        <me.kevinwells.darxen.view.ActionItem
+            android:id="@+id/btnLast"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:contentDescription="@string/frame_last"
+            android:src="@drawable/action_last" />
+    </LinearLayout>
+
+</RelativeLayout>

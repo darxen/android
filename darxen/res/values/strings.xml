@@ -7,5 +7,10 @@
     <string name="location_services_title">Enable location services</string>
     <string name="do_it">Do it</string>
     <string name="quit">Quit</string>
+    <string name="frame_first">First Frame</string>
+    <string name="frame_previous">Previous Frame</string>
+    <string name="frame_play_pause">Play/Pause</string>
+    <string name="frame_next">Next Frame</string>
+    <string name="frame_last">Last Frame</string>
 
 </resources>

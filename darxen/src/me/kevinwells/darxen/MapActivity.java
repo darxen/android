@@ -33,8 +33,11 @@ import android.provider.Settings;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.Loader;
 import android.util.Log;
+import android.view.View;
+import android.view.View.OnClickListener;
 import android.view.WindowManager;
 import android.widget.FrameLayout;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -50,6 +53,12 @@ public class MapActivity extends SherlockFragmentActivity {
 	private RenderModel mModel;
     private LocationManager locationManager;
     private LocationListener locationListener;
+    
+    private ImageView btnFirst;
+    private ImageView btnPrevious;
+    private ImageView btnPlay;
+    private ImageView btnNext;
+    private ImageView btnLast;
     
     private LatLon mPosition;
     private ArrayList<RadarSite> mRadarSites;
@@ -80,6 +89,46 @@ public class MapActivity extends SherlockFragmentActivity {
         
         mTitle = (TextView)findViewById(R.id.title);
         
+        btnFirst = (ImageView)findViewById(R.id.btnFirst);
+        btnFirst.setOnClickListener(new OnClickListener() {
+			@Override
+			public void onClick(View v) {
+				btnFirst_clicked();
+			}
+		});
+        
+        btnPrevious = (ImageView)findViewById(R.id.btnPrevious);
+        btnPrevious.setOnClickListener(new OnClickListener() {
+			@Override
+			public void onClick(View v) {
+				btnPrevious_clicked();
+			}
+		});
+        
+        btnPlay = (ImageView)findViewById(R.id.btnPlay);
+        btnPlay.setOnClickListener(new OnClickListener() {
+			@Override
+			public void onClick(View v) {
+				btnPlay_clicked();
+			}
+		});
+        
+        btnNext = (ImageView)findViewById(R.id.btnNext);
+        btnNext.setOnClickListener(new OnClickListener() {
+			@Override
+			public void onClick(View v) {
+				btnNext_clicked();
+			}
+		});
+        
+        btnLast = (ImageView)findViewById(R.id.btnLast);
+        btnLast.setOnClickListener(new OnClickListener() {
+			@Override
+			public void onClick(View v) {
+				btnLast_clicked();
+			}
+		});
+        
         Prefs.unsetLastUpdateTime();
         
         loadSites();
@@ -93,6 +142,23 @@ public class MapActivity extends SherlockFragmentActivity {
 
 	@Override
 	public boolean onPrepareOptionsMenu(Menu menu) {
+		
+		boolean visible = mRadarData != null && mRadarData.getCount() > 1;
+		
+		if (visible) {
+			boolean hasPrevious = mRadarData.hasPrevious();
+			btnPrevious.setEnabled(hasPrevious);
+			btnFirst.setEnabled(hasPrevious);
+			
+			boolean hasNext = mRadarData.hasNext();
+			btnNext.setEnabled(hasNext);
+			btnLast.setEnabled(hasNext);
+			
+			btnPlay.setImageResource(mRadarData.isAnimating() ? R.drawable.action_pause : R.drawable.action_play);
+		}
+		
+		findViewById(R.id.animation).setVisibility(visible ? View.VISIBLE : View.GONE);
+		
 		return true;
 	}
 
@@ -106,6 +172,31 @@ public class MapActivity extends SherlockFragmentActivity {
 			return false;
 		}
 		return true;
+	}
+	
+	private void btnFirst_clicked() {
+		mRadarData.moveFirst();
+	}
+	
+	private void btnPrevious_clicked() {
+		mRadarData.movePrevious();
+	}
+	
+	private void btnPlay_clicked() {
+		if (mRadarData.isAnimating()) {
+			mRadarData.stopAnimation();
+		} else {
+			mRadarData.startAnimation();
+		}
+		invalidateOptionsMenu();
+	}
+	
+	private void btnNext_clicked() {
+		mRadarData.moveNext();
+	}
+	
+	private void btnLast_clicked() {
+		mRadarData.moveLast();
 	}
 	
 	private void update() {
@@ -309,11 +400,17 @@ public class MapActivity extends SherlockFragmentActivity {
     private RadarDataModel.RadarDataModelListener mRadarModelListener = new RadarDataModel.RadarDataModelListener() {
 		@Override
 		public void onUpdated() {
-			DataFile file = mRadarData.getLatestData();
+			invalidateOptionsMenu();
+		}
+
+		@Override
+		public void onCurrentChanged(long time) {
+			DataFile file = mRadarData.getData(time);
 			
 			mTitle.setText(new String(file.header).replace("\n", ""));
-			
 			mRadarView.setDataFile(file);
+			
+			invalidateOptionsMenu();
 		}
 	};
     
