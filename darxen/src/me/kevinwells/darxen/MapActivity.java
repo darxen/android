@@ -36,7 +36,6 @@ import android.util.Log;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.WindowManager;
-import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -83,9 +82,9 @@ public class MapActivity extends SherlockFragmentActivity {
         }
         setContentView(R.layout.main);
         
-        mRadarView = new RadarView(this, getSupportLoaderManager());
+        mRadarView = (RadarView)findViewById(R.id.radarview);
+        mRadarView.setLoaderManager(getSupportLoaderManager());
         mModel = mRadarView.getModel();
-        ((FrameLayout)findViewById(R.id.container)).addView(mRadarView);
         
         mTitle = (TextView)findViewById(R.id.title);
         

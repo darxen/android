@@ -17,8 +17,10 @@ import android.content.Context;
 import android.opengl.GLSurfaceView;
 import android.opengl.Matrix;
 import android.os.Bundle;
+import android.os.Parcelable;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.Loader;
+import android.util.AttributeSet;
 import android.view.MotionEvent;
 
 public class RadarView extends GLSurfaceView implements GestureSurface {
@@ -32,6 +34,7 @@ public class RadarView extends GLSurfaceView implements GestureSurface {
 	private RadarRenderer mRenderer;
 	private RenderModel mModel;
 	
+	private boolean mHasTransform = false;
 	private float[] mTransform = new float[32];
 	private static final int OFFSET_CURRENT = 0;
 	private static final int OFFSET_TEMP = 16;
@@ -42,9 +45,8 @@ public class RadarView extends GLSurfaceView implements GestureSurface {
 	private static final int TASK_RENDER_LEGEND = 101;
 	private static final int TASK_RENDER_LOCATION = 102;
 
-	public RadarView(Context context, LoaderManager loaderManager) {
-		super(context);
-		mLoaderManager = loaderManager;
+	public RadarView(Context context, AttributeSet attrs) {
+		super(context, attrs);
 		
 		mModel = new RenderModel();
 		
@@ -52,11 +54,16 @@ public class RadarView extends GLSurfaceView implements GestureSurface {
 		scale(1.0f/230.0f);
 		updateTransform();
 		mModel.commit();
+		mHasTransform = false;
 		
 		mRenderer = new RadarRenderer(mModel);
 		
 		//setEGLContextClientVersion(2);
 		setRenderer(mRenderer);
+	}
+	
+	public void setLoaderManager(LoaderManager loaderManager) {
+		mLoaderManager = loaderManager;
 	}
 	
 	public RenderModel getModel() {
@@ -72,7 +79,7 @@ public class RadarView extends GLSurfaceView implements GestureSurface {
 			return;
 		}
 		
-		if (mData == null) {
+		if (!mHasTransform) {
 			//set the initial transform
 			Matrix.setIdentityM(mTransform, OFFSET_CURRENT);
 			RadialDataPacket packet = (RadialDataPacket)data.getDataFile().description.symbologyBlock.packets[0];
@@ -101,6 +108,29 @@ public class RadarView extends GLSurfaceView implements GestureSurface {
 
 	public void setViewpointListener(ViewpointListener listener) {
 		mViewpointListener = listener;
+	}
+
+	private static final String STATE_TRANSFORM = "Transform";
+	private static final String STATE_PARENT = "Parent";
+	
+	@Override
+	protected Parcelable onSaveInstanceState() {
+		Bundle icicle = new Bundle();
+		
+		icicle.putFloatArray(STATE_TRANSFORM, mTransform);
+		icicle.putParcelable(STATE_PARENT, super.onSaveInstanceState());
+		
+		return icicle;
+	}
+	
+	@Override
+	protected void onRestoreInstanceState(Parcelable state) {
+		Bundle icicle = (Bundle)state;
+		
+		mTransform = icicle.getFloatArray(STATE_TRANSFORM);
+		updateTransform();
+		
+		super.onRestoreInstanceState(icicle.getParcelable(STATE_PARENT));
 	}
 	
 	@Override
@@ -131,6 +161,8 @@ public class RadarView extends GLSurfaceView implements GestureSurface {
 		
 		mModel.getWritable().setTransform(transform);
 		mModel.commit();
+		
+		mHasTransform = true;
 	}
 	
 	private void updateViewpoint() {

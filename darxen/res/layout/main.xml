@@ -15,6 +15,12 @@
         android:layout_height="wrap_content"
         android:layout_above="@+id/animation"
         android:layout_below="@id/title" >
+
+        <me.kevinwells.darxen.RadarView
+            android:id="@+id/radarview"
+            android:layout_width="fill_parent"
+            android:layout_height="fill_parent" >
+        </me.kevinwells.darxen.RadarView>
     </FrameLayout>
 
     <LinearLayout
