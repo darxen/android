@@ -157,6 +157,11 @@ public class RadarView extends GLSurfaceView implements GestureSurface {
 	}
 
 	private void loadRadar() {
+		if (mData == null && getData().mRadar != null) {
+			getData().mRadar.setData(null);
+			return;
+		}
+		
 		Bundle args = RenderRadar.bundleArgs(mData);
 		mLoaderManager.initLoader(TASK_RENDER_RADAR, args, mTaskLoadRadarCallbacks);
 		
@@ -189,6 +194,11 @@ public class RadarView extends GLSurfaceView implements GestureSurface {
     };
 	
 	private void loadLegend() {
+		if (mData == null && getData().mLegend != null) {
+			getData().mLegend.setData(null);
+			return;
+		}
+		
 		Bundle args = RenderLegend.bundleArgs(mData);
 		mLoaderManager.initLoader(TASK_RENDER_LEGEND, args, mTaskLoadLegendCallbacks);
 		
