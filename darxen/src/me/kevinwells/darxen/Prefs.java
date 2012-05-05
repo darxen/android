@@ -7,8 +7,24 @@ import android.content.SharedPreferences;
 
 public class Prefs {
 	
-	private static final String PREFS_NAME = "prefs";
-	private static final String PREF_UPDATE_TIME = "UPDATE_TIME";
+	public static final String PREFS_NAME = "prefs";
+	
+	private static final String PREF_UPDATE_TIME = "UpdateTime";
+	private static final String PREF_INITIAL_FRAMES = "InitialFrames";
+	private static final String PREF_MAXIMUM_FRAMES = "MaximumFrames";
+	private static final String PREF_FRAME_DELAY = "FrameDelay";
+	
+	public static int getInitialFrames() {
+		return Integer.valueOf(getPrefs().getString(PREF_INITIAL_FRAMES, "5"));
+	}
+	
+	public static int getMaximumFrames() {
+		return Integer.valueOf(getPrefs().getString(PREF_MAXIMUM_FRAMES, "15"));
+	}
+	
+	public static int getFrameDelay() {
+		return Integer.valueOf(getPrefs().getString(PREF_FRAME_DELAY, "250"));
+	}
 	
 	public static void unsetLastUpdateTime() {
 		getPrefs().edit()

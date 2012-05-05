@@ -3,6 +3,7 @@ package me.kevinwells.darxen.model;
 import java.util.Map.Entry;
 import java.util.TreeMap;
 
+import me.kevinwells.darxen.Prefs;
 import me.kevinwells.darxen.compat.CompatTreeMap;
 import android.os.Handler;
 import android.os.Parcel;
@@ -22,11 +23,8 @@ public class RadarDataModel implements Parcelable {
 	
 	private long mCurrent;
 	
-	private int mDataLimit;
-	
 	public RadarDataModel() {
 		mFiles = new CompatTreeMap<Long, RadarData>();
-		mDataLimit = 15;
 	}
 	
 	public void setCallbacks(RadarDataModelListener callbacks) {
@@ -37,7 +35,7 @@ public class RadarDataModel implements Parcelable {
 	}
 	
 	public int getDataLimit() {
-		return mDataLimit;
+		return Prefs.getMaximumFrames();
 	}
 	
 	public synchronized void addDataFile(long time, RadarData data) {
@@ -47,8 +45,13 @@ public class RadarDataModel implements Parcelable {
 		mFiles.put(time, data);
 		
 		//limit number of entries
-		while (mFiles.size() > mDataLimit) {
-			mFiles.remove(mFiles.firstKey());
+		while (mFiles.size() > getDataLimit()) {
+			long key = mFiles.firstKey();
+			if (mCurrent == key) {
+				//FIXME would be better to initialize to the next key.  Would need to fire onCurrentChanged
+				mCurrent = 0;
+			}
+			mFiles.remove(key);
 		}
 		
 		//notify UI of updates
@@ -80,7 +83,7 @@ public class RadarDataModel implements Parcelable {
 	}
 	
 	public boolean isFull() {
-		return mFiles.size() >= mDataLimit;
+		return mFiles.size() >= getDataLimit();
 	}
 	
 	public synchronized RadarData getCurrentData() {
@@ -176,9 +179,9 @@ public class RadarDataModel implements Parcelable {
 			}
 			
 			if (hasNext()) {
-				mHandler.postDelayed(this, 250);
+				mHandler.postDelayed(this, Prefs.getFrameDelay());
 			} else {
-				mHandler.postDelayed(this, 1000);
+				mHandler.postDelayed(this, Prefs.getFrameDelay()*4);
 			}
 		}
 	};
@@ -206,7 +209,6 @@ public class RadarDataModel implements Parcelable {
 	@Override
 	public void writeToParcel(Parcel dest, int flags) {
 		dest.writeLong(mCurrent);
-		dest.writeInt(mDataLimit);
 		
 		int size = mFiles.size();
 		dest.writeInt(size);
@@ -218,7 +220,6 @@ public class RadarDataModel implements Parcelable {
 	
 	public RadarDataModel(Parcel in) {
 		mCurrent = in.readLong();
-		mDataLimit = in.readInt();
 		
 		int size = in.readInt();
 		mFiles = new CompatTreeMap<Long, RadarData>();

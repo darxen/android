@@ -167,6 +167,9 @@ public class MapActivity extends SherlockFragmentActivity {
 		case R.id.refresh:
 			update();
 			break;
+		case R.id.preferences:
+			startActivity(PreferencesActivity.createIntent(this));
+			break;
 		default:
 			return false;
 		}
@@ -403,6 +406,10 @@ public class MapActivity extends SherlockFragmentActivity {
     
     private void updateCurrentFrame() {
 		RadarData data = mRadarData.getCurrentData();
+		
+		if (data == null) {
+			return;
+		}
 		
 		mTitle.setText(new String(data.getDataFile().header).replace("\n", ""));
 		mRadarView.setDataFile(data);

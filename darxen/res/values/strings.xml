@@ -12,5 +12,6 @@
     <string name="frame_play_pause">Play/Pause</string>
     <string name="frame_next">Next Frame</string>
     <string name="frame_last">Last Frame</string>
+    <string name="preferences">Preferences</string>
 
 </resources>

@@ -11,6 +11,7 @@ import java.util.Iterator;
 import java.util.List;
 
 import me.kevinwells.darxen.C;
+import me.kevinwells.darxen.Prefs;
 import me.kevinwells.darxen.RadarSite;
 import me.kevinwells.darxen.data.DataFile;
 import me.kevinwells.darxen.data.Level3Parser;
@@ -92,7 +93,8 @@ public class LoadRadar extends CachedAsyncLoader<RadarDataModel> {
 			} while (files == null);
 			
 			//Download the most recent files
-			for (int i = files.size() - 1; i > files.size() - Math.min(6, mModel.getDataLimit()); i--) {
+			int minIndex = files.size() - Math.min(Prefs.getInitialFrames(), mModel.getDataLimit()) - 1;
+			for (int i = files.size() - 1; i > minIndex; i--) {
 				if (Thread.interrupted())
 					return null;
 				
