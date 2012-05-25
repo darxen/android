@@ -79,11 +79,12 @@ public class RadarView extends GLSurfaceView implements GestureSurface {
 			return;
 		}
 		
-		if (!mHasTransform) {
+		if (!mHasTransform && data != null) {
 			//set the initial transform
 			Matrix.setIdentityM(mTransform, OFFSET_CURRENT);
 			RadialDataPacket packet = (RadialDataPacket)data.getDataFile().description.symbologyBlock.packets[0];
 			scale(1.0f/packet.rangeBinCount);
+			updateTransform();
 		}
 		
 		mData = data;
