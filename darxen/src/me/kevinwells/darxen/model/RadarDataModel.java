@@ -16,6 +16,7 @@ public class RadarDataModel implements Parcelable {
 	public interface RadarDataModelListener {
 		public void onUpdated();
 		public void onCurrentChanged(long time);
+		public void onPastFrameAdded(long time);
 	}
 
 	private Handler mHandler = new Handler();
@@ -45,7 +46,7 @@ public class RadarDataModel implements Parcelable {
 		return Prefs.getMaximumFrames();
 	}
 	
-	public synchronized void addDataFile(long time, RadarData data) {
+	public synchronized void addDataFile(final long time, RadarData data) {
 		boolean isLastCurrent = !hasNext();
 		
 		//add the record
@@ -60,8 +61,18 @@ public class RadarDataModel implements Parcelable {
 			}
 			mFiles.remove(key);
 		}
-		
+
 		//notify UI of updates
+		if (time < mCurrent && hasDataFile(time)) {
+			mHandler.post(new Runnable() {
+				@Override
+				public void run() {
+					for (RadarDataModelListener callbacks : mCallbacks) {
+						callbacks.onPastFrameAdded(time);
+					}
+				}
+			});
+		}
 		mHandler.post(new Runnable() {
 			@Override
 			public void run() {

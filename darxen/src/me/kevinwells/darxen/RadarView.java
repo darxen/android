@@ -46,6 +46,9 @@ public class RadarView extends GLSurfaceView implements GestureSurface {
 	private static final int TASK_RENDER_RADAR = 100;
 	private static final int TASK_RENDER_LEGEND = 101;
 	private static final int TASK_RENDER_LOCATION = 102;
+	private static final int TASK_PRERENDER_RADAR_START = 110;
+	
+	private int mPrerenderCount = 0;
 
 	public RadarView(Context context, AttributeSet attrs) {
 		super(context, attrs);
@@ -200,6 +203,7 @@ public class RadarView extends GLSurfaceView implements GestureSurface {
 			updateTransform();
 		}
 		
+		//FIXME detect if preloading data and handle appropriately
 		mCurrentData = data;
 		loadRadar();
 		loadLegend();
@@ -213,7 +217,53 @@ public class RadarView extends GLSurfaceView implements GestureSurface {
 		public void onCurrentChanged(long time) {
 			updateCurrentFrame();
 		}
+		@Override
+		public void onPastFrameAdded(long time) {
+			preloadRadar(time);
+		}
 	};
+	
+	private void preloadRadar(long time) {
+		RadarData data = mRadarData.getData(time);
+		
+		if (data.getRadarRenderData() == null) {
+			int taskId = TASK_PRERENDER_RADAR_START + mPrerenderCount++;
+
+			Bundle args = RenderRadar.bundleArgs(data);
+			mLoaderManager.initLoader(taskId, args, 
+					new LoaderManager.LoaderCallbacks<RadarRenderData>() {
+				@Override
+				public Loader<RadarRenderData> onCreateLoader(int id, Bundle args) {
+					return RenderRadar.createInstance(getContext(), args);
+				}
+				@Override
+				public void onLoadFinished(Loader<RadarRenderData> loader, RadarRenderData renderData) {
+				}
+				@Override
+				public void onLoaderReset(Loader<RadarRenderData> loader) {
+				}
+		    });
+		}
+		
+		if (data.getLegendRenderData() == null) {
+			int taskId = TASK_PRERENDER_RADAR_START + mPrerenderCount++;
+			
+			Bundle args = RenderLegend.bundleArgs(data);
+			mLoaderManager.initLoader(taskId, args, 
+					new LoaderManager.LoaderCallbacks<LegendRenderData>() {
+				@Override
+				public Loader<LegendRenderData> onCreateLoader(int id, Bundle args) {
+					return RenderLegend.createInstance(getContext(), args);
+				}
+				@Override
+				public void onLoadFinished(Loader<LegendRenderData> loader, LegendRenderData renderData) {
+				}
+				@Override
+				public void onLoaderReset(Loader<LegendRenderData> loader) {
+				}
+		    });
+		}
+	}
 
 	private void loadRadar() {
 		if (mCurrentData == null && getData().mRadar != null) {

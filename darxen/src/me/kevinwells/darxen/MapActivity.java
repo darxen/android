@@ -440,6 +440,9 @@ public class MapActivity extends SherlockFragmentActivity {
 		public void onCurrentChanged(long time) {
 			updateCurrentFrame();
 		}
+		@Override
+		public void onPastFrameAdded(long time) {
+		}
 	};
     
     private void loadShapefiles(LatLon center) {
