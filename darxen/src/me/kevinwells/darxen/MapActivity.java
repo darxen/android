@@ -2,7 +2,8 @@ package me.kevinwells.darxen;
 
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 
 import javax.microedition.khronos.opengles.GL10;
 
@@ -27,7 +28,6 @@ import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.location.LocationProvider;
-import android.os.Build;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.support.v4.app.LoaderManager;
@@ -70,7 +70,7 @@ public class MapActivity extends SherlockFragmentActivity {
     private static final int TASK_LOAD_RADAR = 2;
     private static final int TASK_LOAD_SHAPEFILES = 3;
     
-    private List<ShapefileInfo> mShapefiles;
+    private Map<ShapefileId, ShapefileInfo> mShapefiles;
     
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -287,6 +287,8 @@ public class MapActivity extends SherlockFragmentActivity {
         //locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, locationListener);
     	
     	mRadarView.onResume();
+    	
+    	loadSites();
     }
     
     @Override
@@ -446,8 +448,9 @@ public class MapActivity extends SherlockFragmentActivity {
 	};
     
     private void loadShapefiles(LatLon center) {
+    	//cleanup old shapefiles
     	if (mShapefiles != null) {
-    		for (ShapefileInfo info : mShapefiles) {
+    		for (ShapefileInfo info : mShapefiles.values()) {
     			RenderData data = mModel.getWritable();
     			data.removeUnderlay(info.mUnderlay);
     			data.removeOverlay(info.mOverlay);
@@ -455,27 +458,38 @@ public class MapActivity extends SherlockFragmentActivity {
 			}
     	}
 	
-    	mShapefiles = new ArrayList<ShapefileInfo>();
+    	//build current shapefiles
+    	mShapefiles = new HashMap<ShapefileId, ShapefileInfo>();
+    	
+    	if (Prefs.isShapefileEnabled(ShapefileId.STATE_LINES))
     	{
-        	//states
     		ShapefileConfig config = new ShapefileConfig(R.raw.states_shp, R.raw.states_dbf, R.raw.states_shx, ShapefileId.STATE_LINES);
     		ShapefileRenderConfig underRenderConfig = new ShapefileRenderConfig(new Color(1.0f, 1.0f, 1.0f), 3.0f, GL10.GL_LINE_STRIP);
     		ShapefileRenderConfig overRenderConfig = new ShapefileRenderConfig(new Color(1.0f, 1.0f, 1.0f, 0.4f), 3.0f, GL10.GL_LINE_STRIP);
-    		mShapefiles.add(new ShapefileInfo(config, underRenderConfig, overRenderConfig));
+    		mShapefiles.put(ShapefileId.STATE_LINES, new ShapefileInfo(config, underRenderConfig, overRenderConfig));
     	}
     	
-    	//froyo can't read resources >1MB, like county lines
-    	if (Build.VERSION.SDK_INT > 8)
+    	if (Prefs.isShapefileEnabled(ShapefileId.COUNTY_LINES))
     	{
-        	//counties
     		ShapefileConfig config = new ShapefileConfig(R.raw.counties_shp, R.raw.counties_dbf, R.raw.counties_shx, ShapefileId.COUNTY_LINES);
     		ShapefileRenderConfig underRenderConfig = new ShapefileRenderConfig(new Color(0.75f, 0.75f, 0.75f), 1.0f, GL10.GL_LINE_STRIP);
     		ShapefileRenderConfig overRenderConfig = new ShapefileRenderConfig(new Color(0.75f, 0.75f, 0.75f, 0.4f), 1.0f, GL10.GL_LINE_STRIP);
-    		mShapefiles.add(new ShapefileInfo(config, underRenderConfig, overRenderConfig));
+    		mShapefiles.put(ShapefileId.COUNTY_LINES, new ShapefileInfo(config, underRenderConfig, overRenderConfig));
     	}
     	
-    	for (int i = 0; i < mShapefiles.size(); i++) {
-    		ShapefileInfo info = mShapefiles.get(i);
+    	//remove old loaders
+    	LoaderManager loaderManager = getSupportLoaderManager();
+    	for (ShapefileId id : ShapefileId.values()) {
+    		if (mShapefiles.containsKey(id))
+    			continue;
+    		
+			int index = TASK_LOAD_SHAPEFILES + id.ordinal();
+			if (loaderManager.getLoader(index) != null)
+				loaderManager.destroyLoader(index);
+		}
+    	
+    	//init new loaders
+    	for (ShapefileInfo info : mShapefiles.values()) {
     		
     		ShapefileRenderData model = new ShapefileRenderData();
     		
@@ -489,23 +503,23 @@ public class MapActivity extends SherlockFragmentActivity {
     		info.mUnderlay = underlay;
     		info.mOverlay = overlay;
     		
-			loadShapefile(i, center, info.mConfig, model);
+			loadShapefile(center, info.mConfig, model);
 		}
     }
     
     private void reloadShapefiles(LatLon viewpoint) {
-    	for (int i = 0; i < mShapefiles.size(); i++) {
-			int index = TASK_LOAD_SHAPEFILES + i;
+    	for (ShapefileId id : mShapefiles.keySet()) {
+    		int index = TASK_LOAD_SHAPEFILES + id.ordinal();
 			LoadShapefile loader = LoadShapefile.getInstance(getSupportLoaderManager(), index);
 
 			loader.setViewPoint(viewpoint);
 			loader.startLoading();
-		}	
+		}
     }
     
-    private void loadShapefile(int index, LatLon center, ShapefileConfig config, ShapefileRenderData data) {
+    private void loadShapefile(LatLon center, ShapefileConfig config, ShapefileRenderData data) {
     	Bundle args = LoadShapefile.bundleArgs(center, config, data);
-    	int id = TASK_LOAD_SHAPEFILES + index;
+    	int id = TASK_LOAD_SHAPEFILES + config.id.ordinal();
     	LoadShapefile loader;
     	loader = LoadShapefile.castInstance(getSupportLoaderManager().initLoader(id, args, mTaskLoadShapefilesCallbacks));
     	loader.setUpdateThrottle(100);
@@ -526,8 +540,8 @@ public class MapActivity extends SherlockFragmentActivity {
 		}
 		@Override
 		public void onLoadFinished(Loader<ShapefileRenderData> loader, ShapefileRenderData data) {
-			int index = loader.getId() - TASK_LOAD_SHAPEFILES;
-			ShapefileInfo info = mShapefiles.get(index);
+			ShapefileId id = ShapefileId.fromOrdinal(loader.getId() - TASK_LOAD_SHAPEFILES);
+			ShapefileInfo info = mShapefiles.get(id);
 
 			if (info.mUnderlay != null) {
 				info.mUnderlay.setData(data);
@@ -538,9 +552,12 @@ public class MapActivity extends SherlockFragmentActivity {
 		}
 		@Override
 		public void onLoaderReset(Loader<ShapefileRenderData> loader) {
-			int index = loader.getId() - TASK_LOAD_SHAPEFILES;
-			ShapefileInfo info = mShapefiles.get(index);
-
+			ShapefileId id = ShapefileId.fromOrdinal(loader.getId() - TASK_LOAD_SHAPEFILES);
+			if (!mShapefiles.containsKey(id))
+				return;
+			
+			ShapefileInfo info = mShapefiles.get(id);
+			
 			RenderData data = mModel.getWritable();
 			data.removeUnderlay(info.mUnderlay);
 			data.removeOverlay(info.mOverlay);

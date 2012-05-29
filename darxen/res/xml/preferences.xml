@@ -2,7 +2,7 @@
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android" >
 
     <PreferenceCategory
-        android:summary="Customize radar animation "
+        android:summary="Customize radar animation"
         android:title="Animation Settings" >
         <ListPreference
             android:defaultValue="5"
@@ -25,6 +25,20 @@
             android:key="FrameDelay"
             android:summary="How quickly the animation changes radar frames"
             android:title="Animation Speed" />
+    </PreferenceCategory>
+    <PreferenceCategory
+        android:summary="Select Rendered Shapefiles"
+        android:title="Shapefiles" >
+        <CheckBoxPreference
+            android:defaultValue="true"
+            android:key="ShapefileStates"
+            android:summary="Draw state lines"
+            android:title="State Lines" />
+        <CheckBoxPreference
+            android:defaultValue="true"
+            android:key="ShapefileCounties"
+            android:summary="Draw county lines"
+            android:title="County Lines" />
     </PreferenceCategory>
 
 </PreferenceScreen>

@@ -13,5 +13,6 @@
     <string name="frame_next">Next Frame</string>
     <string name="frame_last">Last Frame</string>
     <string name="preferences">Preferences</string>
+    <string name="unsupported_shapefile">Not supported with current Android version</string>
 
 </resources>
