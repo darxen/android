@@ -229,6 +229,7 @@ public class MapActivity extends SherlockFragmentActivity {
 		mRadarView.setLocation(mPosition);
 	}
 
+	@Override
     protected void onResume() {
     	super.onResume();
     	
@@ -288,6 +289,7 @@ public class MapActivity extends SherlockFragmentActivity {
     	mRadarView.onResume();
     }
     
+    @Override
     protected void onPause() {
     	super.onPause();
     	
@@ -295,6 +297,15 @@ public class MapActivity extends SherlockFragmentActivity {
     	mRadarView.setLocation(null);
     	
     	mRadarView.onPause();
+    }
+    
+    @Override
+    protected void onDestroy() {
+    	super.onDestroy();
+    	
+    	if (mRadarData != null) {
+    		mRadarData.removeCallbacks(mRadarModelListener);
+    	}
     }
     
     private void initSite() {
@@ -358,7 +369,7 @@ public class MapActivity extends SherlockFragmentActivity {
 	private void loadRadar() {
 		if (mRadarData == null) {
 			mRadarData = new RadarDataModel();
-			mRadarData.setCallbacks(mRadarModelListener);
+			mRadarData.addCallbacks(mRadarModelListener);
 		}
 		
 		Bundle args = LoadRadar.bundleArgs(mRadarSite, mRadarData);
@@ -368,7 +379,7 @@ public class MapActivity extends SherlockFragmentActivity {
 	private void reloadRadar() {
 		if (mRadarData == null) {
 			mRadarData = new RadarDataModel();
-			mRadarData.setCallbacks(mRadarModelListener);
+			mRadarData.addCallbacks(mRadarModelListener);
 		}
 		
 		Bundle args = LoadRadar.bundleArgs(mRadarSite, mRadarData);
@@ -391,8 +402,9 @@ public class MapActivity extends SherlockFragmentActivity {
 			}
 			
 			if (data != mRadarData) {
+				mRadarData.removeCallbacks(mRadarModelListener);
 				mRadarData = data;
-				data.setCallbacks(mRadarModelListener);
+				data.addCallbacks(mRadarModelListener);
 			}
 			
 			updateCurrentFrame();

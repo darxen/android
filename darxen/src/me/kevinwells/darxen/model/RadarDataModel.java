@@ -1,5 +1,7 @@
 package me.kevinwells.darxen.model;
 
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map.Entry;
 import java.util.TreeMap;
 
@@ -19,19 +21,24 @@ public class RadarDataModel implements Parcelable {
 	private Handler mHandler = new Handler();
 	
 	private TreeMap<Long, RadarData> mFiles;
-	private RadarDataModelListener mCallbacks;
+	private List<RadarDataModelListener> mCallbacks;
 	
 	private long mCurrent;
 	
 	public RadarDataModel() {
 		mFiles = new CompatTreeMap<Long, RadarData>();
+		mCallbacks = new LinkedList<RadarDataModelListener>();
 	}
 	
-	public void setCallbacks(RadarDataModelListener callbacks) {
-		mCallbacks = callbacks;
+	public void addCallbacks(RadarDataModelListener callbacks) {
+		mCallbacks.add(callbacks);
 		
 		if (mFiles.size() > 0)
-			mCallbacks.onUpdated();
+			callbacks.onUpdated();
+	}
+	
+	public void removeCallbacks(RadarDataModelListener callbacks) {
+		mCallbacks.remove(callbacks);
 	}
 	
 	public int getDataLimit() {
@@ -58,8 +65,8 @@ public class RadarDataModel implements Parcelable {
 		mHandler.post(new Runnable() {
 			@Override
 			public void run() {
-				if (mCallbacks != null) {
-					mCallbacks.onUpdated();	
+				for (RadarDataModelListener callbacks : mCallbacks) {
+					callbacks.onUpdated();
 				}
 			}
 		});
@@ -70,8 +77,8 @@ public class RadarDataModel implements Parcelable {
 			mHandler.post(new Runnable() {
 				@Override
 				public void run() {
-					if (mCallbacks != null) {
-						mCallbacks.onCurrentChanged(mCurrent);	
+					for (RadarDataModelListener callbacks : mCallbacks) {
+						callbacks.onCurrentChanged(mCurrent);
 					}
 				}
 			});
@@ -137,8 +144,8 @@ public class RadarDataModel implements Parcelable {
 	}
 	
 	private void postOnCurrentChanged() {
-		if (mCallbacks != null) {
-			mCallbacks.onCurrentChanged(mCurrent);
+		for (RadarDataModelListener callbacks : mCallbacks) {
+			callbacks.onCurrentChanged(mCurrent);
 		}
 	}
 	
