@@ -8,6 +8,7 @@ import java.io.OutputStream;
 
 import me.kevinwells.darxen.C;
 import android.content.Context;
+import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.util.Log;
@@ -40,7 +41,7 @@ public class DatabaseManager extends SQLiteOpenHelper {
 		return instance;
 	}
 
-	private static final int DATABASE_VERSION = 5;
+	private static final int DATABASE_VERSION = 6;
 	
 	private static final String TABLE_SHAPEFILE_STATUS = "ShapefileStatus";
 	private static final String CREATE_TABLE_SHAPEFILE_STATUS =
@@ -54,10 +55,10 @@ public class DatabaseManager extends SQLiteOpenHelper {
 			"CREATE TABLE " + TABLE_SHAPEFILE_OBJECTS + " " +
 				"( Shapefile INTEGER NOT NULL" +
 				", Id INTEGER NOT NULL" +
-				", XMin REAL NOT NULL" +
-				", XMax REAL NOT NULL" +
-				", YMin REAL NOT NULL" +
-				", YMax REAL NOT NULL" +
+				", XMin INTEGER NOT NULL" +
+				", XMax INTEGER NOT NULL" +
+				", YMin INTEGER NOT NULL" +
+				", YMax INTEGER NOT NULL" +
 				", PRIMARY KEY (Shapefile, Id)" +
 				");";
 	
@@ -70,8 +71,26 @@ public class DatabaseManager extends SQLiteOpenHelper {
 	private static final String DB_NAME = "darxen.db";
 	
 	private boolean dbExists() {
+		//ensure that the file exists
 		File f = new File(DB_PATH + DB_NAME);
-		return f.exists() && f.length() > 0;
+		boolean exists = f.exists() && f.length() > 0;
+		if (!exists)
+			return false;
+		
+		//check the database version
+		int version;
+		try {
+			SQLiteDatabase db = SQLiteDatabase.openDatabase(DB_PATH + DB_NAME, null, SQLiteDatabase.OPEN_READONLY);
+			Cursor cursor = db.rawQuery("PRAGMA user_version", null);
+			cursor.moveToFirst();
+			version = cursor.getInt(0);
+			cursor.close();
+			db.close();
+		} catch (Exception ex) {
+			Log.e(C.TAG, "Unable to query database version", ex);
+			return false;
+		}
+		return version == DATABASE_VERSION;
 	}
 
 	@Override
