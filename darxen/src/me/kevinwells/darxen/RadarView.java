@@ -7,6 +7,7 @@ import me.kevinwells.darxen.loaders.RenderRadar;
 import me.kevinwells.darxen.model.LegendRenderData;
 import me.kevinwells.darxen.model.LocationRenderData;
 import me.kevinwells.darxen.model.RadarData;
+import me.kevinwells.darxen.model.RadarDataModel;
 import me.kevinwells.darxen.model.RadarRenderData;
 import me.kevinwells.darxen.model.RenderData;
 import me.kevinwells.darxen.model.RenderModel;
@@ -26,8 +27,9 @@ import android.view.MotionEvent;
 public class RadarView extends GLSurfaceView implements GestureSurface {
 
 	private LoaderManager mLoaderManager;
-	
-	private RadarData mData;
+
+	private RadarDataModel mRadarData;
+	private RadarData mCurrentData;
 	
 	private GestureRecognizer mRecognizer = new GestureRecognizer(this);
 
@@ -74,24 +76,19 @@ public class RadarView extends GLSurfaceView implements GestureSurface {
 		return mModel.getWritable();
 	}
 
-	public void setDataFile(RadarData data) {
-		if (mData == data) {
-			return;
+	public void setRadarModel(RadarDataModel radarData) {
+		if (mRadarData != null) {
+			mRadarData.removeCallbacks(mRadarModelListener);
 		}
 		
-		if (!mHasTransform && data != null) {
-			//set the initial transform
-			Matrix.setIdentityM(mTransform, OFFSET_CURRENT);
-			RadialDataPacket packet = (RadialDataPacket)data.getDataFile().description.symbologyBlock.packets[0];
-			scale(1.0f/packet.rangeBinCount);
-			updateTransform();
-		}
+		mRadarData = radarData;
 		
-		mData = data;
-		loadRadar();
-		loadLegend();
+		if (mRadarData != null) {
+			mRadarData.addCallbacks(mRadarModelListener);
+		}
+		updateCurrentFrame();
 	}
-	
+
 	public void setLocation(LatLon pos) {
 		updateLocation(pos);
 	}
@@ -188,17 +185,46 @@ public class RadarView extends GLSurfaceView implements GestureSurface {
 	public boolean onTouchEvent(MotionEvent e) {
 		return mRecognizer.onTouchEvent(e);
 	}
+	
+	private void updateCurrentFrame() {
+		RadarData data = mRadarData != null ? mRadarData.getCurrentData() : null;
+		if (mCurrentData == data) {
+			return;
+		}
+		
+		if (!mHasTransform && data != null) {
+			//set the initial transform
+			Matrix.setIdentityM(mTransform, OFFSET_CURRENT);
+			RadialDataPacket packet = (RadialDataPacket)data.getDataFile().description.symbologyBlock.packets[0];
+			scale(1.0f/packet.rangeBinCount);
+			updateTransform();
+		}
+		
+		mCurrentData = data;
+		loadRadar();
+		loadLegend();
+	}
+	
+    private RadarDataModel.RadarDataModelListener mRadarModelListener = new RadarDataModel.RadarDataModelListener() {
+		@Override
+		public void onUpdated() {
+		}
+		@Override
+		public void onCurrentChanged(long time) {
+			updateCurrentFrame();
+		}
+	};
 
 	private void loadRadar() {
-		if (mData == null && getData().mRadar != null) {
+		if (mCurrentData == null && getData().mRadar != null) {
 			getData().mRadar.setData(null);
 			return;
 		}
 		
-		Bundle args = RenderRadar.bundleArgs(mData);
+		Bundle args = RenderRadar.bundleArgs(mCurrentData);
 		mLoaderManager.initLoader(TASK_RENDER_RADAR, args, mTaskLoadRadarCallbacks);
 		
-		if (RenderRadar.getInstance(mLoaderManager, TASK_RENDER_RADAR).getData() != mData) {
+		if (RenderRadar.getInstance(mLoaderManager, TASK_RENDER_RADAR).getData() != mCurrentData) {
 			mLoaderManager.restartLoader(TASK_RENDER_RADAR, args, mTaskLoadRadarCallbacks);
 		}
 	}
@@ -227,15 +253,15 @@ public class RadarView extends GLSurfaceView implements GestureSurface {
     };
 	
 	private void loadLegend() {
-		if (mData == null && getData().mLegend != null) {
+		if (mCurrentData == null && getData().mLegend != null) {
 			getData().mLegend.setData(null);
 			return;
 		}
 		
-		Bundle args = RenderLegend.bundleArgs(mData);
+		Bundle args = RenderLegend.bundleArgs(mCurrentData);
 		mLoaderManager.initLoader(TASK_RENDER_LEGEND, args, mTaskLoadLegendCallbacks);
 		
-		if (RenderLegend.getInstance(mLoaderManager, TASK_RENDER_LEGEND).getData() != mData) {
+		if (RenderLegend.getInstance(mLoaderManager, TASK_RENDER_LEGEND).getData() != mCurrentData) {
 			mLoaderManager.restartLoader(TASK_RENDER_LEGEND, args, mTaskLoadLegendCallbacks);	
 		}
 	}

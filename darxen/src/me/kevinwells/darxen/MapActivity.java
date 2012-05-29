@@ -305,6 +305,7 @@ public class MapActivity extends SherlockFragmentActivity {
     	
     	if (mRadarData != null) {
     		mRadarData.removeCallbacks(mRadarModelListener);
+    		mRadarView.setRadarModel(null);
     	}
     }
     
@@ -370,6 +371,7 @@ public class MapActivity extends SherlockFragmentActivity {
 		if (mRadarData == null) {
 			mRadarData = new RadarDataModel();
 			mRadarData.addCallbacks(mRadarModelListener);
+			mRadarView.setRadarModel(mRadarData);
 		}
 		
 		Bundle args = LoadRadar.bundleArgs(mRadarSite, mRadarData);
@@ -380,6 +382,7 @@ public class MapActivity extends SherlockFragmentActivity {
 		if (mRadarData == null) {
 			mRadarData = new RadarDataModel();
 			mRadarData.addCallbacks(mRadarModelListener);
+			mRadarView.setRadarModel(mRadarData);
 		}
 		
 		Bundle args = LoadRadar.bundleArgs(mRadarSite, mRadarData);
@@ -405,6 +408,7 @@ public class MapActivity extends SherlockFragmentActivity {
 				mRadarData.removeCallbacks(mRadarModelListener);
 				mRadarData = data;
 				data.addCallbacks(mRadarModelListener);
+				mRadarView.setRadarModel(mRadarData);
 			}
 			
 			updateCurrentFrame();
@@ -412,7 +416,6 @@ public class MapActivity extends SherlockFragmentActivity {
 		}
 		@Override
 		public void onLoaderReset(Loader<RadarDataModel> loader) {
-			mRadarView.setDataFile(null);
 		}
     };
     
@@ -424,7 +427,6 @@ public class MapActivity extends SherlockFragmentActivity {
 		}
 		
 		mTitle.setText(new String(data.getDataFile().header).replace("\n", ""));
-		mRadarView.setDataFile(data);
 		
 		invalidateOptionsMenu();
     }
