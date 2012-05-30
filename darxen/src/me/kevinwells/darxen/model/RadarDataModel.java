@@ -3,7 +3,6 @@ package me.kevinwells.darxen.model;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map.Entry;
-import java.util.TreeMap;
 
 import me.kevinwells.darxen.Prefs;
 import me.kevinwells.darxen.compat.CompatTreeMap;
@@ -21,7 +20,7 @@ public class RadarDataModel implements Parcelable {
 
 	private Handler mHandler = new Handler();
 	
-	private TreeMap<Long, RadarData> mFiles;
+	private CompatTreeMap<Long, RadarData> mFiles;
 	private List<RadarDataModelListener> mCallbacks;
 	
 	private long mCurrent;
@@ -124,7 +123,7 @@ public class RadarDataModel implements Parcelable {
 		if (mFiles.isEmpty())
 			return null;
 		
-		Long key = mFiles.lowerKey(time);
+		Long key = mFiles.getLowerKey(time);
 		
 		if (key == null)
 			return mFiles.firstKey();
@@ -136,7 +135,7 @@ public class RadarDataModel implements Parcelable {
 		if (mFiles.isEmpty())
 			return null;
 		
-		Long key = mFiles.higherKey(time);
+		Long key = mFiles.getHigherKey(time);
 		
 		if (key == null)
 			return mFiles.lastKey();

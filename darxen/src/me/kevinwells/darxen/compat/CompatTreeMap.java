@@ -8,7 +8,19 @@ public class CompatTreeMap<K, V> extends TreeMap<K, V> {
 	
 	private static final long serialVersionUID = -5637661680354882597L;
 
+	@Deprecated
 	public K lowerKey(K key) {
+		//not available in android 2.2
+		throw new UnsupportedOperationException();
+	}
+	
+	@Deprecated
+	public K higherKey(K key) {
+		//not available in android 2.2
+		throw new UnsupportedOperationException();
+	}
+	
+	public K getLowerKey(K key) {
 		if (!containsKey(key))
 			return null;
 		
@@ -19,7 +31,7 @@ public class CompatTreeMap<K, V> extends TreeMap<K, V> {
 		return map.lastKey();
 	}
 	
-	public K higherKey(K key) {
+	public K getHigherKey(K key) {
 		if (!containsKey(key))
 			return null;
 		
