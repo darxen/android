@@ -280,11 +280,21 @@ public class MapActivity extends SherlockFragmentActivity {
 			}
 		};
 
-        Location location = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
+		//determine which provider is available
+		String provider = LocationManager.NETWORK_PROVIDER;
+		if (locationManager.getProvider(provider) == null) {
+			provider = LocationManager.GPS_PROVIDER;
+			if (locationManager.getProvider(provider) == null) {
+				Toast.makeText(this, R.string.location_required, Toast.LENGTH_SHORT).show();
+				finish();
+				return;
+			}
+		}
+
+        Location location = locationManager.getLastKnownLocation(provider);
         updateLocation(location);
 		
-        locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 0, 0, locationListener);
-        //locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, locationListener);
+        locationManager.requestLocationUpdates(provider, 0, 0, locationListener);
     	
     	mRadarView.onResume();
     	
