@@ -1,3 +1,6 @@
 [submodule "ActionBarSherlock"]
 	path = ActionBarSherlock
 	url = https://github.com/JakeWharton/ActionBarSherlock.git
+[submodule "HoloEverywhere"]
+	path = HoloEverywhere
+	url = git@github.com:Darxen/HoloEverywhere.git
