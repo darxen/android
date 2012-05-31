@@ -87,7 +87,7 @@ jboolean Java_me_kevinwells_darxen_shp_DbfFile_isNull(JNIEnv* env, jobject this,
 	if (!hDbf)
 	{
 		ThrowClosedException(env);
-		return;
+		return false;
 	}
 
 	return DBFIsAttributeNULL(hDbf, record, field);
@@ -99,7 +99,7 @@ jint Java_me_kevinwells_darxen_shp_DbfFile_getInt(JNIEnv* env, jobject this, int
 	if (!hDbf)
 	{
 		ThrowClosedException(env);
-		return;
+		return 0;
 	}
 
 	return DBFReadIntegerAttribute(hDbf, record, field);
@@ -111,7 +111,7 @@ jdouble Java_me_kevinwells_darxen_shp_DbfFile_getDouble(JNIEnv* env, jobject thi
 	if (!hDbf)
 	{
 		ThrowClosedException(env);
-		return;
+		return 0.0f;
 	}
 
 	return DBFReadDoubleAttribute(hDbf, record, field);
@@ -123,7 +123,7 @@ jstring Java_me_kevinwells_darxen_shp_DbfFile_getString(JNIEnv* env, jobject thi
 	if (!hDbf)
 	{
 		ThrowClosedException(env);
-		return;
+		return NULL;
 	}
 
 	const char* value = DBFReadStringAttribute(hDbf, record, field);

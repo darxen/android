@@ -2,6 +2,7 @@ LOCAL_PATH := $(call my-dir)
 
 include $(CLEAR_VARS)
 
+LOCAL_CFLAGS := -Wall
 LOCAL_LDLIBS := -llog
 
 SHP_FILES := safileio.c dbfopen.c shpopen.c shptree.c

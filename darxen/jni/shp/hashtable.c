@@ -1,6 +1,8 @@
 
 #include "hashtable.h"
 
+#include "common.h"
+
 #include <malloc.h>
 #include <stdlib.h>
 
@@ -46,6 +48,7 @@ HashTable* hash_table_new(HashFunc hashFunc, EqualsFunc equalsFunc)
 	table->capacity = 2;
 	table->table = (Node**)calloc(table->capacity, sizeof(Node*));
 	clear_table(table, FALSE);
+	return table;
 }
 
 void hash_table_free(HashTable* table)
@@ -150,34 +153,5 @@ static void clear_table(HashTable* table, int freeNodes)
 		table->table[i] = NULL;
 	}
 	table->size = 0;
-}
-
-void hash_table_iter_init(HashTable* table, HashTableIter* iter)
-{
-	HashTableIterPriv* it = (HashTableIterPriv*)iter;
-	if (!it)
-		return;
-	it->table = table;
-	it->index = -1;
-	it->pNode = NULL;
-}
-
-int hash_table_iter_next(HashTableIter* iter, pointer* key, pointer* val)
-{
-	HashTableIterPriv* it = (HashTableIterPriv*)iter;
-	if (!it)
-		return FALSE;
-	if (!it->pNode)
-	{
-		if (it->index + 1 == it->table->capacity)
-			return FALSE;
-		it->index++;
-		it->pNode = it->table->table[it->index];
-		return hash_table_iter_next(iter, key, val);
-	}
-	if (key) *key = it->pNode->key;
-	if (val) *val = it->pNode->val;
-	it->pNode = it->pNode->next;
-	return TRUE;
 }
 

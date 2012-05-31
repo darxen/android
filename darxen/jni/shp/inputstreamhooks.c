@@ -3,6 +3,8 @@
 
 #include "hashtable.h"
 
+#include <assert.h>
+
 #define BUFFER_SIZE 1024
 
 static unsigned long key_hash(int index);
@@ -57,6 +59,7 @@ static int key_equal(int a, int b)
 
 static void* idToKey(int id)
 {
+	assert(sizeof(void*) >= sizeof(int));
 	return (void*)id;
 }
 
@@ -201,7 +204,6 @@ static SAOffset InputStream_FRead(void* p, SAOffset size, SAOffset nmemb, SAFile
 	inputStream->pos += total;
 	res = nmemb;
 
-Exit:
 	(*env)->PopLocalFrame(env, NULL);
 
 	return res;

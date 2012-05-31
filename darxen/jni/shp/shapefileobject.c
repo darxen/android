@@ -3,13 +3,6 @@
 
 #include "shapefil.h"
 
-static void setInt(JNIEnv* env, jobject this, const char* name, int value)
-{
-	jclass klass = (*env)->GetObjectClass(env, this);
-	jfieldID fid = (*env)->GetFieldID(env, klass, name, "I");
-	(*env)->SetIntField(env, this, fid, value);
-}
-
 static void setDoubleArray(JNIEnv* env, jobject this, const char* name, jobject value)
 {
 	jclass klass = (*env)->GetObjectClass(env, this);
