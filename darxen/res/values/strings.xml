@@ -15,5 +15,8 @@
     <string name="frame_last">Last Frame</string>
     <string name="preferences">Preferences</string>
     <string name="unsupported_shapefile">Not supported with current Android version</string>
+    <string name="status_wait_location">Waiting for location&#8230;</string>
+    <string name="status_wait_site">Waiting for radar site&#8230;</string>
+    <string name="dialog_title_pick_site">Pick a radar site</string>
 
 </resources>

@@ -7,6 +7,8 @@ import java.util.Map;
 
 import javax.microedition.khronos.opengles.GL10;
 
+import me.kevinwells.darxen.fragments.RequestSiteDialog;
+import me.kevinwells.darxen.fragments.RequestSiteDialog.RequestSiteDialogListener;
 import me.kevinwells.darxen.loaders.FindSite;
 import me.kevinwells.darxen.loaders.LoadRadar;
 import me.kevinwells.darxen.loaders.LoadShapefile;
@@ -27,8 +29,8 @@ import android.content.res.Configuration;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
-import android.location.LocationProvider;
 import android.os.Bundle;
+import android.os.Handler;
 import android.provider.Settings;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.Loader;
@@ -45,7 +47,7 @@ import com.actionbarsherlock.view.Menu;
 import com.actionbarsherlock.view.MenuItem;
 import com.actionbarsherlock.view.Window;
 
-public class MapActivity extends SherlockFragmentActivity {
+public class MapActivity extends SherlockFragmentActivity implements RequestSiteDialogListener {
 	
 	private TextView mTitle;
 	private RadarView mRadarView;
@@ -69,12 +71,14 @@ public class MapActivity extends SherlockFragmentActivity {
     private static final int TASK_FIND_SITE = 1;
     private static final int TASK_LOAD_RADAR = 2;
     private static final int TASK_LOAD_SHAPEFILES = 3;
-    
+
+    private static final String STATE_RADAR_SITE = "RadarSite";
+
     private Map<ShapefileId, ShapefileInfo> mShapefiles;
     
     @Override
-    public void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
+    public void onCreate(Bundle icicle) {
+        super.onCreate(icicle);
         requestWindowFeature(Window.FEATURE_INDETERMINATE_PROGRESS);
         if (getResources().getConfiguration().orientation == Configuration.ORIENTATION_LANDSCAPE) {
         	//hide notification area
@@ -130,10 +134,21 @@ public class MapActivity extends SherlockFragmentActivity {
         
         Prefs.unsetLastUpdateTime();
         
+        if (icicle != null) {
+        	mRadarSite = icicle.getParcelable(STATE_RADAR_SITE);
+        }
+        
         loadSites();
     }
-    
+
     @Override
+	protected void onSaveInstanceState(Bundle icicle) {
+		super.onSaveInstanceState(icicle);
+		
+		icicle.putParcelable(STATE_RADAR_SITE, mRadarSite);
+	}
+
+	@Override
 	public boolean onCreateOptionsMenu(Menu menu) {
     	getSupportMenuInflater().inflate(R.menu.map, menu);
 		return true;
@@ -215,10 +230,12 @@ public class MapActivity extends SherlockFragmentActivity {
 		reloadRadar();
 	}
 	
-	private void updateLocation(Location location) {
+	private boolean updateLocation(Location location) {
 		if (location == null)
-			return;
-		
+			return false;
+
+		unsetStatus();
+
 		boolean initSite = mPosition == null;
 		Log.v(C.TAG, location.toString());
 		mPosition = new LatLon(location.getLatitude(), location.getLongitude());
@@ -227,16 +244,36 @@ public class MapActivity extends SherlockFragmentActivity {
 			initSite();
 		
 		mRadarView.setLocation(mPosition);
+		
+		return true;
 	}
 
 	@Override
     protected void onResume() {
     	super.onResume();
     	
+    	if (mRadarSite != null)
+    		foundSite(mRadarSite);
+    	
+    	final Handler timer = new Handler();
+    	final Runnable timeout = new Runnable() {
+			@Override
+			public void run() {
+				if (locationListener != null) {
+					locationManager.removeUpdates(locationListener);
+					locationListener = null;
+				}
+				setStatus(R.string.status_wait_site);
+				new RequestSiteDialog(mRadarSites).show(getSupportFragmentManager(), RequestSiteDialog.TAG);
+			}
+		};
+    	
         locationManager = (LocationManager)getSystemService(Context.LOCATION_SERVICE);
         locationListener = new LocationListener() {
 			@Override
 			public void onLocationChanged(Location location) {
+				timer.removeCallbacks(timeout);
+				
 				updateLocation(location);
 			}
 
@@ -268,16 +305,16 @@ public class MapActivity extends SherlockFragmentActivity {
 			}
 
 			@Override
-			public void onProviderEnabled(String provider) {}
+			public void onProviderEnabled(String provider) {
+		        if (mRadarSite == null) {
+		        	//only wait for so long
+		        	timer.removeCallbacks(timeout);
+		        	timer.postDelayed(timeout, 15000);
+		        }
+			}
 
 			@Override
-			public void onStatusChanged(String provider, int status, Bundle extras) {
-				if (status != LocationProvider.AVAILABLE) {
-					//TEMPORARILY_UNAVAILABLE
-					//AVAILABLE
-					//mRadarView.setLocation(null);
-				}
-			}
+			public void onStatusChanged(String provider, int status, Bundle extras) {}
 		};
 
 		//determine which provider is available
@@ -291,8 +328,15 @@ public class MapActivity extends SherlockFragmentActivity {
 			}
 		}
 
+		if (mRadarSite == null) {
+			setStatus(R.string.status_wait_location);
+		}
+		
         Location location = locationManager.getLastKnownLocation(provider);
-        updateLocation(location);
+        if (!updateLocation(location) && mRadarSite == null && locationManager.isProviderEnabled(provider)) {
+        	//only wait for so long
+        	timer.postDelayed(timeout, 15000);
+        }
 		
         locationManager.requestLocationUpdates(provider, 0, 0, locationListener);
     	
@@ -305,7 +349,10 @@ public class MapActivity extends SherlockFragmentActivity {
     protected void onPause() {
     	super.onPause();
     	
-    	locationManager.removeUpdates(locationListener);
+    	if (locationListener != null) {
+    		locationManager.removeUpdates(locationListener);
+    		locationListener = null;
+    	}
     	mRadarView.setLocation(null);
     	
     	mRadarView.onPause();
@@ -320,11 +367,41 @@ public class MapActivity extends SherlockFragmentActivity {
     		mRadarView.setRadarModel(null);
     	}
     }
+
+	@Override
+	public void onRequestSiteCancelled() {
+		Toast.makeText(this, R.string.location_required, Toast.LENGTH_SHORT).show();
+		finish();
+	}
+
+	@Override
+	public void onRequestSiteResult(RadarSite site) {
+		unsetStatus();
+		foundSite(site);
+	}
+    
+    private void setStatus(final int res) {
+    	this.runOnUiThread(new Runnable() {
+			@Override
+			public void run() {
+				getSupportActionBar().setSubtitle(res);
+			}
+		});
+    }
+    
+    private void unsetStatus() {
+    	this.runOnUiThread(new Runnable() {
+			@Override
+			public void run() {
+				getSupportActionBar().setSubtitle(null);
+			}
+		});
+    }
     
     private void initSite() {
     	if (mRadarSites == null || mPosition == null)
     		return;
-    	
+
     	findSite();
     }
     
@@ -354,6 +431,19 @@ public class MapActivity extends SherlockFragmentActivity {
 		getSupportLoaderManager().initLoader(TASK_FIND_SITE, args, mTaskFindSiteCallbacks);
 	}
 	
+	private void foundSite(RadarSite radarSite) {
+		mRadarSite = radarSite;
+		RenderData data = mModel.getWritable();
+		data.setCenter(mRadarSite.mCenter);
+		mModel.commit();
+		
+		loadRadar();
+        loadShapefiles(radarSite.mCenter);
+        
+        if (mPosition != null)
+        	mRadarView.setLocation(mPosition);
+	}
+	
     private LoaderManager.LoaderCallbacks<RadarSite> mTaskFindSiteCallbacks =
     		new LoaderManager.LoaderCallbacks<RadarSite>() {
 		@Override
@@ -362,16 +452,7 @@ public class MapActivity extends SherlockFragmentActivity {
 		}
 		@Override
 		public void onLoadFinished(Loader<RadarSite> loader, RadarSite radarSite) {
-			mRadarSite = radarSite;
-			RenderData data = mModel.getWritable();
-			data.setCenter(mRadarSite.center);
-			mModel.commit();
-			
-			loadRadar();
-	        loadShapefiles(radarSite.center);
-	        
-	        if (mPosition != null)
-	        	mRadarView.setLocation(mPosition);
+			foundSite(radarSite);
 		}
 		@Override
 		public void onLoaderReset(Loader<RadarSite> loader) {
@@ -589,4 +670,5 @@ public class MapActivity extends SherlockFragmentActivity {
 			this.mOverlayRenderConfig = overRenderConfig;
 		}
     }
+
 }

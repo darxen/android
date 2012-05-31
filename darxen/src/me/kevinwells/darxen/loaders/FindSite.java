@@ -41,14 +41,14 @@ public class FindSite extends CachedAsyncLoader<RadarSite> {
 	protected RadarSite doInBackground() {
 		if (STATIC_SITE != null) {
 			for (int i = 0; i < mRadarSites.size(); i++)
-				if (mRadarSites.get(i).name.equals(STATIC_SITE))
+				if (mRadarSites.get(i).mName.equals(STATIC_SITE))
 					return mRadarSites.get(i);
 		}
 		
 		double[] distances = new double[mRadarSites.size()];
 		
 		for (int i = 0; i < mRadarSites.size(); i++)
-			distances[i] = mPosition.distanceTo(mRadarSites.get(i).center);
+			distances[i] = mPosition.distanceTo(mRadarSites.get(i).mCenter);
 		
 		double minValue = distances[0];
 		int minIndex = 0;

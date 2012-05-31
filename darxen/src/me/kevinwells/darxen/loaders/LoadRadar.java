@@ -156,7 +156,7 @@ public class LoadRadar extends CachedAsyncLoader<RadarDataModel> {
 			throw new IOException("Failed to connect");
 		ftpClient.login("anonymous", "darxen");
 		
-		ftpClient.changeWorkingDirectory("SL.us008001/DF.of/DC.radar/DS.p19r0/SI." + mRadarSite.name.toLowerCase());
+		ftpClient.changeWorkingDirectory("SL.us008001/DF.of/DC.radar/DS.p19r0/SI." + mRadarSite.mName.toLowerCase());
 		ftpClient.setFileType(FTP.BINARY_FILE_TYPE);
 		ftpClient.enterLocalPassiveMode();
 		

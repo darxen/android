@@ -5,12 +5,21 @@ import android.os.Parcelable;
 
 public class RadarSite implements Parcelable {
 
-	public String name;
-	public LatLon center;
+	public String mName;
+	public LatLon mCenter;
+	public String mState;
+	public String mCity;
 	
-	public RadarSite(String name, LatLon center) {
-		this.name = name;
-		this.center = center;
+	public RadarSite(String name, LatLon center, String state, String city) {
+		mName = name;
+		mCenter = center;
+		mState = state;
+		mCity = city;
+	}
+	
+	@Override
+	public String toString() {
+		return String.format("%s (%s, %s)", mName, mCity, mState);
 	}
 
 	@Override
@@ -20,13 +29,17 @@ public class RadarSite implements Parcelable {
 
 	@Override
 	public void writeToParcel(Parcel parcel, int flags) {
-		parcel.writeString(name);
-		parcel.writeParcelable(center, flags);
+		parcel.writeString(mName);
+		parcel.writeParcelable(mCenter, flags);
+		parcel.writeString(mState);
+		parcel.writeString(mCity);
 	}
 
 	public RadarSite(Parcel in) {
-		name = in.readString();
-		center = in.readParcelable(LatLon.class.getClassLoader());
+		mName = in.readString();
+		mCenter = in.readParcelable(LatLon.class.getClassLoader());
+		mState = in.readString();
+		mCity = in.readString();
 	}
 	
 	public static final Parcelable.Creator<RadarSite> CREATOR =

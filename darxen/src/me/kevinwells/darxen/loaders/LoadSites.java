@@ -32,8 +32,10 @@ public class LoadSites extends CachedAsyncLoader<ArrayList<RadarSite>> {
 			String name = site.getString(0).toUpperCase();
 			double lat = site.getDouble(1);
 			double lon = site.getDouble(2);
+			String state = site.getString(3);
+			String city = site.getString(4);
 			
-			radarSites.add(new RadarSite(name, new LatLon(lat, lon)));
+			radarSites.add(new RadarSite(name, new LatLon(lat, lon), state, city));
 		}
 		try {
 			sites.close();
