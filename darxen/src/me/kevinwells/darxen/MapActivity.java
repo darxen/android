@@ -7,6 +7,7 @@ import java.util.Map;
 
 import javax.microedition.khronos.opengles.GL10;
 
+import me.kevinwells.darxen.fragments.EnableLocationDialog;
 import me.kevinwells.darxen.fragments.RequestSiteDialog;
 import me.kevinwells.darxen.fragments.RequestSiteDialog.RequestSiteDialogListener;
 import me.kevinwells.darxen.loaders.FindSite;
@@ -21,17 +22,13 @@ import me.kevinwells.darxen.model.RenderModel;
 import me.kevinwells.darxen.model.ShapefileConfig;
 import me.kevinwells.darxen.model.ShapefileId;
 import me.kevinwells.darxen.renderables.LinearShapefileRenderable;
-import android.app.AlertDialog;
 import android.content.Context;
-import android.content.DialogInterface;
-import android.content.Intent;
 import android.content.res.Configuration;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
 import android.os.Handler;
-import android.provider.Settings;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.Loader;
 import android.util.Log;
@@ -279,29 +276,9 @@ public class MapActivity extends SherlockFragmentActivity implements RequestSite
 
 			@Override
 			public void onProviderDisabled(String provider) {
-				new AlertDialog.Builder(MapActivity.this)
-	        	.setTitle(R.string.location_services_title)
-	        	.setMessage(R.string.location_services_message)
-	        	.setCancelable(true)
-	        	.setOnCancelListener(new DialogInterface.OnCancelListener() {
-					@Override
-					public void onCancel(DialogInterface dialog) {
-						finish();
-					}
-				})
-	        	.setPositiveButton(R.string.do_it, new DialogInterface.OnClickListener() {
-					@Override
-					public void onClick(DialogInterface dialog, int which) {
-						Intent intent = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
-						startActivity(intent);
-					}
-				})
-				.setNegativeButton(R.string.quit, new DialogInterface.OnClickListener() {
-					@Override
-					public void onClick(DialogInterface dialog, int which) {
-						finish();
-					}
-				}).create().show();
+				if (getSupportFragmentManager().findFragmentByTag(EnableLocationDialog.TAG) == null) {
+					new EnableLocationDialog().show(getSupportFragmentManager(), EnableLocationDialog.TAG);
+				}
 			}
 
 			@Override
