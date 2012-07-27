@@ -2,7 +2,10 @@ package me.kevinwells.darxen.data;
 
 import java.io.IOException;
 import java.io.Serializable;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.HashMap;
+import java.util.TimeZone;
 
 public class Description implements Serializable {
 	
@@ -12,6 +15,9 @@ public class Description implements Serializable {
 	public float lon;
 	
 	public OpMode opmode;
+	
+	public Date scanTime;
+	public Date genTime;
 	
 	public SymbologyBlock symbologyBlock;
 	
@@ -46,10 +52,17 @@ public class Description implements Serializable {
 		stream.readShort();
 		stream.readShort();
 		stream.readShort();
-		stream.readShort();
-		stream.readInt();
-		stream.readShort();
-		stream.readInt();
+		{
+			short date;
+			int time;
+			date = stream.readShort();
+			time = stream.readInt();
+			res.scanTime = convertDate(date, time);
+	
+			date = stream.readShort();
+			time = stream.readInt();
+			res.genTime = convertDate(date, time);
+		}
 		
 		//prod specific codes
 		stream.readShort();
@@ -80,6 +93,17 @@ public class Description implements Serializable {
 		}
 		
 		return res;
+	}
+	
+	private static Date convertDate(short date, int time) {
+		Calendar cal = Calendar.getInstance();
+		cal.clear();
+		cal.set(Calendar.YEAR, 1);
+		cal.set(Calendar.DATE, 1);
+		cal.setTimeZone(TimeZone.getTimeZone("GMT"));
+		cal.add(Calendar.DAY_OF_YEAR, date + 719161 + 2);
+		cal.add(Calendar.SECOND, time);
+		return cal.getTime();
 	}
 	
 	public enum OpMode {
