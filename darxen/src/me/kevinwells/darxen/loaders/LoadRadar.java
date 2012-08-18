@@ -93,7 +93,7 @@ public class LoadRadar extends CachedAsyncLoader<RadarDataModel> {
 			} while (files == null);
 			
 			//Download the most recent files
-			int minIndex = files.size() - Math.min(Prefs.getInitialFrames(), mModel.getDataLimit()) - 1;
+			int minIndex = Math.max(0, files.size() - Math.min(Prefs.getInitialFrames(), mModel.getDataLimit()) - 1);
 			for (int i = files.size() - 1; i > minIndex; i--) {
 				if (Thread.interrupted())
 					return null;
