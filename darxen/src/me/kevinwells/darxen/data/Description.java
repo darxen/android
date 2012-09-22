@@ -4,8 +4,9 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.util.Calendar;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.TimeZone;
+
+import android.util.SparseArray;
 
 public class Description implements Serializable {
 	
@@ -111,10 +112,10 @@ public class Description implements Serializable {
 		CLEAN_AIR,
 		PRECIPITATION;
 		
-		private static HashMap<Integer, OpMode> types;
+		private static SparseArray<OpMode> types;
 		
 		static {
-			types = new HashMap<Integer, OpMode>();
+			types = new SparseArray<OpMode>();
 			for (OpMode type : OpMode.values()) {
 				types.put(type.ordinal(), type);
 			}
