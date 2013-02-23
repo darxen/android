@@ -529,6 +529,14 @@ public class MapActivity extends SherlockFragmentActivity implements RequestSite
     	//build current shapefiles
     	mShapefiles = new HashMap<ShapefileId, ShapefileInfo>();
     	
+    	if (Prefs.isShapefileEnabled(ShapefileId.RADAR_SITES))
+    	{
+    		ShapefileConfig config = new ShapefileConfig(R.raw.radars_shp, R.raw.radars_dbf, R.raw.radars_shx, ShapefileId.RADAR_SITES);
+    		ShapefileRenderConfig underRenderConfig = new ShapefileRenderConfig(new Color(0.0f, 0.0f, 1.0f), 10.0f, GL10.GL_POINTS);
+    		ShapefileRenderConfig overRenderConfig = new ShapefileRenderConfig(new Color(0.0f, 0.0f, 1.0f, 0.4f), 10.0f, GL10.GL_POINTS);
+    		mShapefiles.put(ShapefileId.RADAR_SITES, new ShapefileInfo(config, underRenderConfig, overRenderConfig));
+    	}
+    	
     	if (Prefs.isShapefileEnabled(ShapefileId.STATE_LINES))
     	{
     		ShapefileConfig config = new ShapefileConfig(R.raw.states_shp, R.raw.states_dbf, R.raw.states_shx, ShapefileId.STATE_LINES);

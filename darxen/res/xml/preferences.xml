@@ -39,6 +39,11 @@
             android:key="ShapefileCounties"
             android:summary="Draw county lines"
             android:title="County Lines" />
+        <CheckBoxPreference
+            android:defaultValue="true"
+            android:key="ShapefileRadarSites"
+            android:summary="Draw available radar sites"
+            android:title="Radar Sites" />
     </PreferenceCategory>
 
 </PreferenceScreen>

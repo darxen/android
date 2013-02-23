@@ -34,6 +34,7 @@ public class LinearShapefileRenderable implements Renderable {
 					gl.glColor4f(color.r, color.g, color.b, color.a);
 					gl.glVertexPointer(2, GL10.GL_FLOAT, 0, data.getBuffer());
 					gl.glLineWidth(mRenderConfig.mLineWidth);
+					gl.glPointSize(mRenderConfig.mLineWidth);
 					gl.glDrawArrays(mRenderConfig.mRenderType, 0, data.mCount);
 				}
 			}

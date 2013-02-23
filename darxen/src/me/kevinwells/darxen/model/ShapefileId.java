@@ -3,6 +3,7 @@ package me.kevinwells.darxen.model;
 import java.util.HashMap;
 
 public enum ShapefileId {
+	RADAR_SITES,
 	STATE_LINES,
 	COUNTY_LINES;
 	

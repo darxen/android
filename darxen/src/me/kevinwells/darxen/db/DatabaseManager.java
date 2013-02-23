@@ -41,7 +41,7 @@ public class DatabaseManager extends SQLiteOpenHelper {
 		return instance;
 	}
 
-	private static final int DATABASE_VERSION = 6;
+	private static final int DATABASE_VERSION = 7;
 	
 	private static final String TABLE_SHAPEFILE_STATUS = "ShapefileStatus";
 	private static final String CREATE_TABLE_SHAPEFILE_STATUS =

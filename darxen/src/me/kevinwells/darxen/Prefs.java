@@ -16,6 +16,7 @@ public class Prefs {
 	private static final String PREF_MAXIMUM_FRAMES = "MaximumFrames";
 	private static final String PREF_FRAME_DELAY = "FrameDelay";
 	
+	private static final String PREF_SHAPEFILE_RADAR_SITES = "ShapefileRadarSites";
 	private static final String PREF_SHAPEFILE_STATES = "ShapefileStates";
 	private static final String PREF_SHAPEFILE_COUNTIES = "ShapefileCounties";
 	
@@ -35,6 +36,10 @@ public class Prefs {
 		String key;
 		boolean big;
 		switch (shapefile) {
+		case RADAR_SITES:
+			key = PREF_SHAPEFILE_RADAR_SITES;
+			big = false;
+			break;
 		case STATE_LINES:
 			key = PREF_SHAPEFILE_STATES;
 			big = false;

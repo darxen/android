@@ -201,15 +201,20 @@ public class LoadShapefile extends CachedAsyncLoader<ShapefileRenderData> {
 		
 		List<ShapefileObjectPartRenderData> parts = new ArrayList<ShapefileObjectPartRenderData>();
 
-		for (int j = 0; j < obj.nParts; j++) {
-			int start = obj.panPartStart[j];
-			int end = start;
-			for (int k = start; k < obj.nVertices; k++) {
-				end = k+1;
-				if (j < obj.nParts-1 && k+1 == obj.panPartStart[j+1])
-					break;
+		if (obj.nParts == 0) {
+			// single point
+			parts.add(generateObjectPart(obj, 0, 1));
+		} else {
+			for (int j = 0; j < obj.nParts; j++) {
+				int start = obj.panPartStart[j];
+				int end = start;
+				for (int k = start; k < obj.nVertices; k++) {
+					end = k+1;
+					if (j < obj.nParts-1 && k+1 == obj.panPartStart[j+1])
+						break;
+				}
+				parts.add(generateObjectPart(obj, start, end));
 			}
-			parts.add(generateObjectPart(obj, start, end));
 		}
 		
 		ShapefileObjectPartRenderData[] array = new ShapefileObjectPartRenderData[parts.size()];
