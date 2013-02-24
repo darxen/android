@@ -235,6 +235,7 @@ public class LoadShapefile extends CachedAsyncLoader<ShapefileRenderData> {
 			latLon.lat = shapePt.y;
 			latLon.lon = shapePt.x;
 			p2 = latLon.project(mCenter, p2);
+			
 			array[j++] = (float)p2.x;
 			array[j++] = (float)p2.y;
 		}

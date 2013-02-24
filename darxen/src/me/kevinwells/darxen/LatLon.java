@@ -28,7 +28,7 @@ public class LatLon implements Parcelable {
 		double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 		return R * c;
 	}
-	
+
 	public Point2D project(LatLon center, Point2D res) {
 		if (res == null)
 			res = new Point2D();
@@ -36,18 +36,43 @@ public class LatLon implements Parcelable {
 		Point3D geoCenter = geodeticToGeocentric(center);
 		Point3D geoOffset = geodeticToGeocentric(this);
 		
-		Point3D local = projectToLocal(center, geoCenter, geoOffset);
-		
+		Point3D local = projectToLocal(center, geoCenter, geoOffset, null);
+
 		res.x = local.x;
 		res.y = local.y;
 		return res;
 	}
 	
+	private Point3D project3D(LatLon center, Point3D res) {
+		Point3D geoCenter = geodeticToGeocentric(center);
+		Point3D geoOffset = geodeticToGeocentric(this);
+		
+		res = projectToLocal(center, geoCenter, geoOffset, res);
+
+		return res;
+	}
+	
 	public static LatLon unproject(Point2D pt, LatLon center, LatLon res) {
+		final double EPSILON = 1.0;
+		Point3D local = new Point3D(pt.x, pt.y, 0.0);
+		double lastZ;
+		int i = 0;
+
+		// iterate to find z part of pt, up to 10 iterations
+		do
+		{
+			local.x = pt.x;
+			local.y = pt.y;
+			lastZ = local.z;
+			res = unproject(local, center, res);
+			local = res.project3D(center, local);
+		} while (Math.abs(local.z - lastZ) > EPSILON && i++ < 10);
+		return res;
+	}
+	
+	public static LatLon unproject(Point3D local, LatLon center, LatLon res) {
 		if (res == null)
 			res = new LatLon();
-		
-		Point3D local = new Point3D(pt.x, pt.y, 0.0);
 		
 		Point3D geoCenter = geodeticToGeocentric(center);
 		Point3D geocentric = projectFromLocal(local, center, geoCenter);
@@ -170,7 +195,11 @@ public class LatLon implements Parcelable {
 
 	}
 
-	private static Point3D projectToLocal(LatLon center, Point3D geoCenter, Point3D geoOffset) {
+	private static Point3D projectToLocal(LatLon center, Point3D geoCenter, Point3D geoOffset, Point3D res) {
+		if (res == null) {
+			res = new Point3D();
+		}
+		
 		double offsetX = geoOffset.x - geoCenter.x;
 		double offsetY = geoOffset.y - geoCenter.y;
 		double offsetZ = geoOffset.z - geoCenter.z;
@@ -178,16 +207,16 @@ public class LatLon implements Parcelable {
 		double geodeticCenterLat = Math.toRadians(center.lat);
 		double geodeticCenterLon = Math.toRadians(center.lon);
 		
-		double resX = 	offsetX * -Math.sin(geodeticCenterLon) +
-						offsetY * Math.cos(geodeticCenterLon);
-		double resY = 	offsetX * -Math.sin(geodeticCenterLat) * Math.cos(geodeticCenterLon) +
-						offsetY * -Math.sin(geodeticCenterLat) * Math.sin(geodeticCenterLon) +
-						offsetZ * Math.cos(geodeticCenterLat);
-		double resZ = 	offsetX * Math.cos(geodeticCenterLat) * Math.cos(geodeticCenterLon) +
-						offsetY * Math.cos(geodeticCenterLat) * Math.sin(geodeticCenterLon) +
-						offsetZ * Math.sin(geodeticCenterLat);
+		res.x = offsetX * -Math.sin(geodeticCenterLon) +
+				offsetY * Math.cos(geodeticCenterLon);
+		res.y = offsetX * -Math.sin(geodeticCenterLat) * Math.cos(geodeticCenterLon) +
+				offsetY * -Math.sin(geodeticCenterLat) * Math.sin(geodeticCenterLon) +
+				offsetZ * Math.cos(geodeticCenterLat);
+		res.z = offsetX * Math.cos(geodeticCenterLat) * Math.cos(geodeticCenterLon) +
+				offsetY * Math.cos(geodeticCenterLat) * Math.sin(geodeticCenterLon) +
+				offsetZ * Math.sin(geodeticCenterLat);
 		
-		return new Point3D(resX, resY, resZ);
+		return res;
 	}
 	
 	private static Point3D projectFromLocal(Point3D local, LatLon center, Point3D geoCenter) {

@@ -149,6 +149,36 @@ public class RadarView extends GLSurfaceView implements GestureSurface {
 	}
 	
 	@Override
+	public void onTap(float x, float y) {
+		float width = getWidth();
+		float height = getHeight();
+		
+		if (!Matrix.invertM(mTransform, OFFSET_TEMP, mTransform, OFFSET_CURRENT))
+			return;
+		
+		if (getData().mCenter == null)
+			return;
+
+		float vect[] = new float[4];
+		vect[0] = x / (width / 2.0f) - 1.0f;
+		vect[1] = -(y / (height / 2.0f) - 1.0f);
+		vect[3] = 1.0f;
+		if (height > width) {
+			float aspect = height / width;
+			vect[1] *= aspect;
+		} else {
+			float aspect = width / height;
+			vect[0] *= aspect;
+		}
+		Matrix.multiplyMV(vect, 0, mTransform, OFFSET_TEMP, vect, 0);
+
+		LatLon viewpoint = LatLon.unproject(new Point2D(vect[0], vect[1]), getData().mCenter, null);
+
+		// TODO something more interesting
+		setLocation(viewpoint);
+	}
+	
+	@Override
 	public void onTouchUpdate() {
 		updateTransform();
 		updateViewpoint();
