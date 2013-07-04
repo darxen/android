@@ -7,6 +7,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 
 import me.kevinwells.darxen.C;
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
@@ -67,6 +68,7 @@ public class DatabaseManager extends SQLiteOpenHelper {
 		mContext = context;
 	}
 	
+	@SuppressLint("SdCardPath") // Not a path to sdcard
 	private static final String DB_PATH = "/data/data/me.kevinwells.darxen/databases/";
 	private static final String DB_NAME = "darxen.db";
 	

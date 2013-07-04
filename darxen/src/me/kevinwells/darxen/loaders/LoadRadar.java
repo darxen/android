@@ -24,12 +24,14 @@ import org.apache.commons.net.ftp.FTPClient;
 import org.apache.commons.net.ftp.FTPFile;
 import org.apache.commons.net.ftp.FTPReply;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.os.Bundle;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.Loader;
 import android.util.Log;
 
+@SuppressLint("DefaultLocale")
 public class LoadRadar extends CachedAsyncLoader<RadarDataModel> {
 	
 	private static final String ARG_RADAR_SITE = "RadarSite";

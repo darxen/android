@@ -274,13 +274,17 @@ public class MapActivity extends Activity implements RequestSiteDialogListener, 
     	final Handler timer = new Handler();
     	final Runnable timeout = new Runnable() {
 			@Override
+			@SuppressWarnings("deprecation")
 			public void run() {
 				if (locationListener != null) {
 					locationManager.removeUpdates(locationListener);
 					locationListener = null;
+
+					setStatus(R.string.status_wait_site);
+					if (getSupportFragmentManager().findFragmentByTag(RequestSiteDialog.TAG) == null) {
+						RequestSiteDialog.create(mRadarSites).show(getSupportFragmentManager(), RequestSiteDialog.TAG);
+					}
 				}
-				setStatus(R.string.status_wait_site);
-				new RequestSiteDialog(mRadarSites).show(getSupportFragmentManager(), RequestSiteDialog.TAG);
 			}
 		};
     	
@@ -294,6 +298,7 @@ public class MapActivity extends Activity implements RequestSiteDialogListener, 
 			}
 
 			@Override
+			@SuppressWarnings("deprecation")
 			public void onProviderDisabled(String provider) {
 				if (getSupportFragmentManager().findFragmentByTag(EnableLocationDialog.TAG) == null) {
 					new EnableLocationDialog().show(getSupportFragmentManager(), EnableLocationDialog.TAG);
@@ -443,18 +448,13 @@ public class MapActivity extends Activity implements RequestSiteDialogListener, 
 	private void findSite() {
 		RadarSite result = RadarSite.Find(mRadarSites, mPosition, SITE_DISTANCE_GPS);
 		if (result == null) {
-			//no close radar sites, ask the user to select one
-			if (locationListener != null) {
-				locationManager.removeUpdates(locationListener);
-				locationListener = null;
-			}
-			setStatus(R.string.status_wait_site);
-			new RequestSiteDialog(mRadarSites).show(getSupportFragmentManager(), RequestSiteDialog.TAG);
+			//TODO no close radar sites, ask the user to select one
 			return;
 		}
 		foundSite(result);
 	}
 	
+	@SuppressWarnings("deprecation")
 	private void findNewSite(LatLon position) {
 		if (mRadarSites == null) {
 			return;

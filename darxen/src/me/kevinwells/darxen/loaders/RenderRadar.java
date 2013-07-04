@@ -15,7 +15,6 @@ import android.content.Context;
 import android.os.Bundle;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.Loader;
-import android.util.FloatMath;
 
 public class RenderRadar extends CachedAsyncLoader<RadarRenderData> {
 
@@ -106,10 +105,10 @@ public class RenderRadar extends CachedAsyncLoader<RadarRenderData> {
 				
 				float start = 90.0f - (radial.start + radial.delta);
 				float end = start + radial.delta;
-				float cosx1 = FloatMath.cos((float)Math.toRadians(start));
-				float siny1 = FloatMath.sin((float)Math.toRadians(start));
-				float cosx2 = FloatMath.cos((float)Math.toRadians(end));
-				float siny2 = FloatMath.sin((float)Math.toRadians(end));
+				float cosx1 = (float)Math.cos(Math.toRadians(start));
+				float siny1 = (float)Math.sin(Math.toRadians(start));
+				float cosx2 = (float)Math.cos(Math.toRadians(end));
+				float siny2 = (float)Math.sin(Math.toRadians(end));
 				
 				int startRange = 0;
 				for (int range = 0; range < radial.codes.length; range++) {

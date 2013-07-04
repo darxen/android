@@ -1,16 +1,16 @@
 package me.kevinwells.darxen.model;
 
-import java.util.HashMap;
+import org.holoeverywhere.util.SparseArray;
 
 public enum ShapefileId {
 	RADAR_SITES,
 	STATE_LINES,
 	COUNTY_LINES;
 	
-	private static HashMap<Integer, ShapefileId> types;
+	private static SparseArray<ShapefileId> types;
 	
 	static {
-		types = new HashMap<Integer, ShapefileId>();
+		types = new SparseArray<ShapefileId>();
 		for (ShapefileId type : ShapefileId.values()) {
 			types.put(type.ordinal(), type);
 		}

@@ -9,8 +9,10 @@ import me.kevinwells.darxen.R;
 import me.kevinwells.darxen.RadarSite;
 import me.kevinwells.darxen.shp.DbfFile;
 import me.kevinwells.darxen.shp.DbfFile.DbfRecord;
+import android.annotation.SuppressLint;
 import android.content.Context;
 
+@SuppressLint("DefaultLocale")
 public class LoadSites extends CachedAsyncLoader<ArrayList<RadarSite>> {
 	
 	public static LoadSites createInstance(Context context) {
