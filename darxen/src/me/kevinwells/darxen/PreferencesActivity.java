@@ -1,18 +1,18 @@
 package me.kevinwells.darxen;
 
+import org.holoeverywhere.preference.CheckBoxPreference;
+import org.holoeverywhere.preference.ListPreference;
+import org.holoeverywhere.preference.Preference;
+import org.holoeverywhere.preference.Preference.OnPreferenceChangeListener;
+import org.holoeverywhere.preference.PreferenceActivity;
+
 import android.content.Context;
 import android.content.Intent;
 import android.os.Build;
 import android.os.Bundle;
-import android.preference.CheckBoxPreference;
-import android.preference.ListPreference;
-import android.preference.Preference;
-import android.preference.Preference.OnPreferenceChangeListener;
 import android.widget.Toast;
 
-import com.actionbarsherlock.app.SherlockPreferenceActivity;
-
-public class PreferencesActivity extends SherlockPreferenceActivity {
+public class PreferencesActivity extends PreferenceActivity {
 	
 	public static Intent createIntent(Context context) {
 		return new Intent(context, PreferencesActivity.class);

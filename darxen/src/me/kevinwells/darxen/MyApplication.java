@@ -1,8 +1,10 @@
 package me.kevinwells.darxen;
 
 import me.kevinwells.darxen.db.DatabaseManager;
+
+import org.holoeverywhere.app.Application;
+
 import android.annotation.TargetApi;
-import android.app.Application;
 import android.os.Build;
 import android.os.StrictMode;
 import android.support.v4.app.LoaderManager;
@@ -23,7 +25,7 @@ public class MyApplication extends Application {
 		manager.onUpgrade(manager.getWritableDatabase(), 0, 0);
 	}
 
-	@TargetApi(Build.VERSION_CODES.HONEYCOMB)
+	@TargetApi(Build.VERSION_CODES.JELLY_BEAN_MR1)
 	@Override
 	public void onCreate() {
 		instance = this;

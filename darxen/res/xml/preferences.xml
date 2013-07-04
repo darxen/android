@@ -1,49 +1,50 @@
 <?xml version="1.0" encoding="utf-8"?>
-<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android" >
+<PreferenceScreen xmlns:holo="http://schemas.android.com/apk/res-auto"
+    xmlns:android="http://schemas.android.com/apk/res/android" >
 
     <PreferenceCategory
-        android:summary="Customize radar animation"
-        android:title="Animation Settings" >
+        holo:summary="Customize radar animation"
+        holo:title="Animation Settings" >
         <ListPreference
-            android:defaultValue="5"
-            android:entries="@array/initial_frames"
-            android:entryValues="@array/initial_frames"
-            android:key="InitialFrames"
-            android:summary="How many radar frames to initially download"
-            android:title="Initial Radar Frames" />
+            holo:defaultValue="5"
+            holo:entries="@array/initial_frames"
+            holo:entryValues="@array/initial_frames"
+            holo:key="InitialFrames"
+            holo:summary="How many radar frames to initially download"
+            holo:title="Initial Radar Frames" />
         <ListPreference
-            android:defaultValue="15"
-            android:entries="@array/maximum_frames"
-            android:entryValues="@array/maximum_frames"
-            android:key="MaximumFrames"
-            android:summary="Maximum number of radar frames to keep"
-            android:title="Maximum Radar Frames" />
+            holo:defaultValue="15"
+            holo:entries="@array/maximum_frames"
+            holo:entryValues="@array/maximum_frames"
+            holo:key="MaximumFrames"
+            holo:summary="Maximum number of radar frames to keep"
+            holo:title="Maximum Radar Frames" />
         <ListPreference
-            android:defaultValue="250"
-            android:entries="@array/frame_delays"
-            android:entryValues="@array/frame_delays_values"
-            android:key="FrameDelay"
-            android:summary="How quickly the animation changes radar frames"
-            android:title="Animation Speed" />
+            holo:defaultValue="250"
+            holo:entries="@array/frame_delays"
+            holo:entryValues="@array/frame_delays_values"
+            holo:key="FrameDelay"
+            holo:summary="How quickly the animation changes radar frames"
+            holo:title="Animation Speed" />
     </PreferenceCategory>
     <PreferenceCategory
-        android:summary="Select Rendered Shapefiles"
-        android:title="Shapefiles" >
+        holo:summary="Select Rendered Shapefiles"
+        holo:title="Shapefiles" >
         <CheckBoxPreference
-            android:defaultValue="true"
-            android:key="ShapefileStates"
-            android:summary="Draw state lines"
-            android:title="State Lines" />
+            holo:defaultValue="true"
+            holo:key="ShapefileStates"
+            holo:summary="Draw state lines"
+            holo:title="State Lines" />
         <CheckBoxPreference
-            android:defaultValue="true"
-            android:key="ShapefileCounties"
-            android:summary="Draw county lines"
-            android:title="County Lines" />
+            holo:defaultValue="true"
+            holo:key="ShapefileCounties"
+            holo:summary="Draw county lines"
+            holo:title="County Lines" />
         <CheckBoxPreference
-            android:defaultValue="true"
-            android:key="ShapefileRadarSites"
-            android:summary="Draw available radar sites"
-            android:title="Radar Sites" />
+            holo:defaultValue="true"
+            holo:key="ShapefileRadarSites"
+            holo:summary="Draw available radar sites"
+            holo:title="Radar Sites" />
     </PreferenceCategory>
 
 </PreferenceScreen>

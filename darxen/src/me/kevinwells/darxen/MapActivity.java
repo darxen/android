@@ -9,8 +9,8 @@ import javax.microedition.khronos.opengles.GL10;
 
 import me.kevinwells.darxen.fragments.EnableLocationDialog;
 import me.kevinwells.darxen.fragments.RequestSiteDialog;
-import me.kevinwells.darxen.fragments.SwitchRadarSiteDialog;
 import me.kevinwells.darxen.fragments.RequestSiteDialog.RequestSiteDialogListener;
+import me.kevinwells.darxen.fragments.SwitchRadarSiteDialog;
 import me.kevinwells.darxen.fragments.SwitchRadarSiteDialog.SwitchRadarSiteDialogListener;
 import me.kevinwells.darxen.loaders.LoadRadar;
 import me.kevinwells.darxen.loaders.LoadShapefile;
@@ -23,6 +23,9 @@ import me.kevinwells.darxen.model.RenderModel;
 import me.kevinwells.darxen.model.ShapefileConfig;
 import me.kevinwells.darxen.model.ShapefileId;
 import me.kevinwells.darxen.renderables.LinearShapefileRenderable;
+
+import org.holoeverywhere.app.Activity;
+
 import android.content.Context;
 import android.content.Intent;
 import android.content.res.Configuration;
@@ -41,12 +44,11 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.actionbarsherlock.app.SherlockFragmentActivity;
 import com.actionbarsherlock.view.Menu;
 import com.actionbarsherlock.view.MenuItem;
 import com.actionbarsherlock.view.Window;
 
-public class MapActivity extends SherlockFragmentActivity implements RequestSiteDialogListener, SwitchRadarSiteDialogListener, MapTapListener {
+public class MapActivity extends Activity implements RequestSiteDialogListener, SwitchRadarSiteDialogListener, MapTapListener {
 	
 	private TextView mTitle;
 	private RadarView mRadarView;
