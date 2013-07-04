@@ -2,3 +2,4 @@ gen
 obj
 bin
 releases
+local.properties

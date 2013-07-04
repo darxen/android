@@ -1,9 +1,13 @@
 package me.kevinwells.darxen;
 
+import java.util.List;
+
 import android.os.Parcel;
 import android.os.Parcelable;
 
 public class RadarSite implements Parcelable {
+	
+	private static final String STATIC_SITE = null;
 
 	public String mName;
 	public LatLon mCenter;
@@ -15,6 +19,32 @@ public class RadarSite implements Parcelable {
 		mCenter = center;
 		mState = state;
 		mCity = city;
+	}
+
+	public static RadarSite Find(List<RadarSite> radarSites, LatLon position, double within) {
+		if (STATIC_SITE != null) {
+			for (int i = 0; i < radarSites.size(); i++)
+				if (radarSites.get(i).mName.equals(STATIC_SITE))
+					return radarSites.get(i);
+		}
+
+		double currentMinDistance = Double.MAX_VALUE;
+		RadarSite result = null;
+
+		for (int i = 0; i < radarSites.size(); i++) {
+			RadarSite candidate = radarSites.get(i);
+			double distance = position.distanceTo(candidate.mCenter);
+			if (distance < currentMinDistance) {
+				result = candidate;
+				currentMinDistance = distance;
+			}
+		}
+		
+		if (currentMinDistance <= within) {
+			return result;
+		} else {
+			return null;
+		}
 	}
 	
 	@Override

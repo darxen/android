@@ -201,7 +201,7 @@ public class LoadShapefile extends CachedAsyncLoader<ShapefileRenderData> {
 		
 		List<ShapefileObjectPartRenderData> parts = new ArrayList<ShapefileObjectPartRenderData>();
 
-		if (obj.nParts == 0) {
+		if (obj.nParts == 0 && obj.nVertices > 0) {
 			// single point
 			parts.add(generateObjectPart(obj, 0, 1));
 		} else {

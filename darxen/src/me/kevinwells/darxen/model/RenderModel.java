@@ -47,6 +47,11 @@ public class RenderModel {
 		return mWritable;
 	}
 	
+	public void clear() {
+		mWritable = new RenderData();
+		commit();
+	}
+	
 	public void commit() {
 		//get or create a data model
 		RenderData writable = mWritables.poll();

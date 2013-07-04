@@ -9,8 +9,9 @@ import javax.microedition.khronos.opengles.GL10;
 
 import me.kevinwells.darxen.fragments.EnableLocationDialog;
 import me.kevinwells.darxen.fragments.RequestSiteDialog;
+import me.kevinwells.darxen.fragments.SwitchRadarSiteDialog;
 import me.kevinwells.darxen.fragments.RequestSiteDialog.RequestSiteDialogListener;
-import me.kevinwells.darxen.loaders.FindSite;
+import me.kevinwells.darxen.fragments.SwitchRadarSiteDialog.SwitchRadarSiteDialogListener;
 import me.kevinwells.darxen.loaders.LoadRadar;
 import me.kevinwells.darxen.loaders.LoadShapefile;
 import me.kevinwells.darxen.loaders.LoadSites;
@@ -23,6 +24,7 @@ import me.kevinwells.darxen.model.ShapefileConfig;
 import me.kevinwells.darxen.model.ShapefileId;
 import me.kevinwells.darxen.renderables.LinearShapefileRenderable;
 import android.content.Context;
+import android.content.Intent;
 import android.content.res.Configuration;
 import android.location.Location;
 import android.location.LocationListener;
@@ -44,7 +46,7 @@ import com.actionbarsherlock.view.Menu;
 import com.actionbarsherlock.view.MenuItem;
 import com.actionbarsherlock.view.Window;
 
-public class MapActivity extends SherlockFragmentActivity implements RequestSiteDialogListener {
+public class MapActivity extends SherlockFragmentActivity implements RequestSiteDialogListener, SwitchRadarSiteDialogListener, MapTapListener {
 	
 	private TextView mTitle;
 	private RadarView mRadarView;
@@ -63,15 +65,21 @@ public class MapActivity extends SherlockFragmentActivity implements RequestSite
 	
     private RadarSite mRadarSite;
     private RadarDataModel mRadarData;
-    
+
+    private Map<ShapefileId, ShapefileInfo> mShapefiles;
+        
     private static final int TASK_LOAD_SITES = 0;
-    private static final int TASK_FIND_SITE = 1;
-    private static final int TASK_LOAD_RADAR = 2;
-    private static final int TASK_LOAD_SHAPEFILES = 3;
+    private static final int TASK_LOAD_RADAR = 1;
+    private static final int TASK_LOAD_SHAPEFILES = 2;
 
     private static final String STATE_RADAR_SITE = "RadarSite";
 
-    private Map<ShapefileId, ShapefileInfo> mShapefiles;
+    public static Intent createIntent(Context context, RadarSite site) {
+    	Intent intent = new Intent(context, MapActivity.class);
+    	intent.addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
+    	intent.putExtra(STATE_RADAR_SITE, site);
+    	return intent;
+    }
     
     @Override
     public void onCreate(Bundle icicle) {
@@ -83,8 +91,15 @@ public class MapActivity extends SherlockFragmentActivity implements RequestSite
         }
         setContentView(R.layout.main);
         
+        mPosition = null;
+        mRadarSites = null;
+        mRadarSite = null;
+        mRadarData = null;
+        mShapefiles = null;
+        
         mRadarView = (RadarView)findViewById(R.id.radarview);
         mRadarView.setLoaderManager(getSupportLoaderManager());
+        mRadarView.setMapTapCallbacks(this);
         mModel = mRadarView.getModel();
         
         mTitle = (TextView)findViewById(R.id.title);
@@ -131,8 +146,12 @@ public class MapActivity extends SherlockFragmentActivity implements RequestSite
         
         Prefs.unsetLastUpdateTime();
         
+        Intent intent = getIntent();
+        
         if (icicle != null) {
         	mRadarSite = icicle.getParcelable(STATE_RADAR_SITE);
+        } else if (intent.hasExtra(STATE_RADAR_SITE)) {
+        	mRadarSite = intent.getParcelableExtra(STATE_RADAR_SITE);
         }
         
         loadSites();
@@ -202,7 +221,7 @@ public class MapActivity extends SherlockFragmentActivity implements RequestSite
 		} else {
 			mRadarData.startAnimation();
 		}
-		invalidateOptionsMenu();
+		supportInvalidateOptionsMenu();
 	}
 	
 	private void btnNext_clicked() {
@@ -233,12 +252,10 @@ public class MapActivity extends SherlockFragmentActivity implements RequestSite
 
 		unsetStatus();
 
-		boolean initSite = mPosition == null;
 		Log.v(C.TAG, location.toString());
 		mPosition = new LatLon(location.getLatitude(), location.getLongitude());
 		
-		if (initSite)
-			initSite();
+		initSite();
 		
 		mRadarView.setLocation(mPosition);
 		
@@ -356,6 +373,16 @@ public class MapActivity extends SherlockFragmentActivity implements RequestSite
 		unsetStatus();
 		foundSite(site);
 	}
+	
+	@Override
+	public void onMapTap(LatLon latlon) {
+		// Switch radar sites
+		if (mRadarSites == null) {
+			return;
+		}
+		
+		findNewSite(latlon);
+	}
     
     private void setStatus(final int res) {
     	this.runOnUiThread(new Runnable() {
@@ -376,7 +403,12 @@ public class MapActivity extends SherlockFragmentActivity implements RequestSite
     }
     
     private void initSite() {
+    	//need both the list of radar sites and a position to find a site
     	if (mRadarSites == null || mPosition == null)
+    		return;
+    	
+    	//don't override the previously selected radar site
+    	if (mRadarSite != null)
     		return;
 
     	findSite();
@@ -402,10 +434,52 @@ public class MapActivity extends SherlockFragmentActivity implements RequestSite
 			MapActivity.this.mRadarSites = null;
 		}
     };
-    
+
+	private static final double SITE_DISTANCE_GPS = 300; //km
+	private static final double SITE_DISTANCE_TAP = 20; //km
+	
 	private void findSite() {
-		Bundle args = FindSite.bundleArgs(mRadarSites, mPosition);
-		getSupportLoaderManager().initLoader(TASK_FIND_SITE, args, mTaskFindSiteCallbacks);
+		RadarSite result = RadarSite.Find(mRadarSites, mPosition, SITE_DISTANCE_GPS);
+		if (result == null) {
+			//no close radar sites, ask the user to select one
+			if (locationListener != null) {
+				locationManager.removeUpdates(locationListener);
+				locationListener = null;
+			}
+			setStatus(R.string.status_wait_site);
+			new RequestSiteDialog(mRadarSites).show(getSupportFragmentManager(), RequestSiteDialog.TAG);
+			return;
+		}
+		foundSite(result);
+	}
+	
+	private void findNewSite(LatLon position) {
+		if (mRadarSites == null) {
+			return;
+		}
+		
+		RadarSite radarSite = RadarSite.Find(mRadarSites, position, SITE_DISTANCE_TAP);
+		
+		if (radarSite == null) {
+			return;
+		}
+		
+		new SwitchRadarSiteDialog()
+			.applyArguments(radarSite)
+			.show(getSupportFragmentManager(), SwitchRadarSiteDialog.TAG);
+		
+	}
+
+	@Override
+	public void onSwitchRadarSite(RadarSite site) {
+		//restart the activity with the selected radar site
+		Intent intent = createIntent(this, site);
+		overridePendingTransition(0, 0);
+		getSupportLoaderManager().destroyLoader(TASK_LOAD_SHAPEFILES);
+		getSupportLoaderManager().destroyLoader(TASK_LOAD_RADAR);
+		finish();
+		overridePendingTransition(0, 0);
+		startActivity(intent);
 	}
 	
 	private void foundSite(RadarSite radarSite) {
@@ -420,22 +494,6 @@ public class MapActivity extends SherlockFragmentActivity implements RequestSite
         if (mPosition != null)
         	mRadarView.setLocation(mPosition);
 	}
-	
-    private LoaderManager.LoaderCallbacks<RadarSite> mTaskFindSiteCallbacks =
-    		new LoaderManager.LoaderCallbacks<RadarSite>() {
-		@Override
-		public Loader<RadarSite> onCreateLoader(int id, Bundle args) {
-			return FindSite.createInstance(MapActivity.this, args);
-		}
-		@Override
-		public void onLoadFinished(Loader<RadarSite> loader, RadarSite radarSite) {
-			foundSite(radarSite);
-		}
-		@Override
-		public void onLoaderReset(Loader<RadarSite> loader) {
-			mRadarSite = null;
-		}
-    };
 
 	private void loadRadar() {
 		if (mRadarData == null) {
@@ -498,13 +556,13 @@ public class MapActivity extends SherlockFragmentActivity implements RequestSite
 		
 		mTitle.setText(new String(data.getDataFile().header).replace("\n", ""));
 		
-		invalidateOptionsMenu();
+		supportInvalidateOptionsMenu();
     }
     
     private RadarDataModel.RadarDataModelListener mRadarModelListener = new RadarDataModel.RadarDataModelListener() {
 		@Override
 		public void onUpdated() {
-			invalidateOptionsMenu();
+			supportInvalidateOptionsMenu();
 		}
 		@Override
 		public void onCurrentChanged(long time) {
@@ -655,5 +713,4 @@ public class MapActivity extends SherlockFragmentActivity implements RequestSite
 			this.mOverlayRenderConfig = overRenderConfig;
 		}
     }
-
 }

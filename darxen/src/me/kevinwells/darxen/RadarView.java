@@ -27,6 +27,7 @@ import android.view.MotionEvent;
 public class RadarView extends GLSurfaceView implements GestureSurface {
 
 	private LoaderManager mLoaderManager;
+	private MapTapListener mMapListener;
 
 	private RadarDataModel mRadarData;
 	private RadarData mCurrentData;
@@ -69,6 +70,10 @@ public class RadarView extends GLSurfaceView implements GestureSurface {
 	
 	public void setLoaderManager(LoaderManager loaderManager) {
 		mLoaderManager = loaderManager;
+	}
+	
+	public void setMapTapCallbacks(MapTapListener listener) {
+		mMapListener = listener;
 	}
 	
 	public RenderModel getModel() {
@@ -150,6 +155,10 @@ public class RadarView extends GLSurfaceView implements GestureSurface {
 	
 	@Override
 	public void onTap(float x, float y) {
+		if (mMapListener == null) {
+			return;
+		}
+		
 		float width = getWidth();
 		float height = getHeight();
 		
@@ -172,10 +181,9 @@ public class RadarView extends GLSurfaceView implements GestureSurface {
 		}
 		Matrix.multiplyMV(vect, 0, mTransform, OFFSET_TEMP, vect, 0);
 
-		LatLon viewpoint = LatLon.unproject(new Point2D(vect[0], vect[1]), getData().mCenter, null);
+		LatLon latlon = LatLon.unproject(new Point2D(vect[0], vect[1]), getData().mCenter, null);
 
-		// TODO something more interesting
-		setLocation(viewpoint);
+		mMapListener.onMapTap(latlon);
 	}
 	
 	@Override

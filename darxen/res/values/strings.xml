@@ -6,8 +6,12 @@
     <string name="location_required">You need location services to use this app</string>
     <string name="location_services_message">You need wireless network location services to be enabled to use this app</string>
     <string name="location_services_title">Enable location services</string>
+    <string name="switch_radarsite_message" formatted="false">Do you want to switch to radar site %s (%s, %s)?</string>
+    <string name="switch_radarsite_title">Switch radar site</string>
     <string name="do_it">Do it</string>
     <string name="quit">Quit</string>
+    <string name="yes">Yes</string>
+    <string name="no">No</string>
     <string name="frame_first">First Frame</string>
     <string name="frame_previous">Previous Frame</string>
     <string name="frame_play_pause">Play/Pause</string>
