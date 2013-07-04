@@ -27,10 +27,17 @@ public class LocationRenderable implements MapMarkerRenderable {
 	
 	@Override
 	public void render(GL10 gl, MapMarkerCallbacks state) {
-		synchronized (mData) {
+		staticRender(gl, state, mData);
+	}
+		
+	public static void staticRender(GL10 gl, MapMarkerCallbacks state, LocationRenderData data) {
+		if (data == null)
+			return;
+		
+		synchronized (data) {
 			FloatBuffer buf;
 			
-			Point2D position = mData.getPosition();
+			Point2D position = data.getPosition();
 			if (position == null) {
 				return;
 			}
@@ -39,7 +46,7 @@ public class LocationRenderable implements MapMarkerRenderable {
 			gl.glPushMatrix();
 			gl.glTranslatef((float)offset.x, (float)offset.y, 0.0f);
 
-			buf = mData.getCrosshairBuffer();
+			buf = data.getCrosshairBuffer();
 			if (buf == null)
 				return;
 			gl.glLineWidth(1.0f);
@@ -47,11 +54,11 @@ public class LocationRenderable implements MapMarkerRenderable {
 			gl.glVertexPointer(2, GL10.GL_FLOAT, 0, buf);
 			gl.glDrawArrays(GL10.GL_LINES, 0, 4);
 
-			buf = mData.getCircleBuffer();
+			buf = data.getCircleBuffer();
 			if (buf == null)
 				return;
 			gl.glVertexPointer(2, GL10.GL_FLOAT, 0, buf);
-			gl.glDrawArrays(GL10.GL_LINE_LOOP, 0, mData.getCircleCount());
+			gl.glDrawArrays(GL10.GL_LINE_LOOP, 0, data.getCircleCount());
 			
 			gl.glPopMatrix();
 		}

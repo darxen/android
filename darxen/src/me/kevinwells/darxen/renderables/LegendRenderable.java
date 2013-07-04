@@ -19,15 +19,22 @@ public class LegendRenderable implements Renderable {
 
 	@Override
 	public void render(GL10 gl) {
-		synchronized (mData) {
-			if (mData.getVertexBuffer() == null)
+		staticRender(gl, mData);
+	}
+		
+	private static void staticRender(GL10 gl, LegendRenderData data) {
+		if (data == null)
+			return;
+			
+		synchronized (data) {
+			if (data.getVertexBuffer() == null)
 				return;
 			
 			gl.glEnableClientState(GL10.GL_COLOR_ARRAY);
 			
-			gl.glVertexPointer(2, GL10.GL_FLOAT, 0, mData.getVertexBuffer());
-			gl.glColorPointer(4, GL10.GL_FLOAT, 0, mData.getColorBuffer());
-			gl.glDrawArrays(GL10.GL_TRIANGLES, 0, mData.getCount());
+			gl.glVertexPointer(2, GL10.GL_FLOAT, 0, data.getVertexBuffer());
+			gl.glColorPointer(4, GL10.GL_FLOAT, 0, data.getColorBuffer());
+			gl.glDrawArrays(GL10.GL_TRIANGLES, 0, data.getCount());
 			
 			gl.glDisableClientState(GL10.GL_COLOR_ARRAY);
 		}
