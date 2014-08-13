@@ -1,0 +1,29 @@
+apply plugin: 'com.android.application'
+
+android {
+    compileSdkVersion 18
+    buildToolsVersion "20.0.0"
+
+    defaultConfig {
+        applicationId "me.kevinwells.darxen"
+        minSdkVersion 11
+        targetSdkVersion 18
+        versionCode 9
+        versionName "0.4.0"
+    }
+    buildTypes {
+        release {
+            runProguard false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+    sourceSets.main {
+        jniLibs.srcDir 'src/libs'
+    }
+}
+
+dependencies {
+    compile 'com.android.support:support-v4:18.0.+@jar'
+    compile 'com.actionbarsherlock:actionbarsherlock:4.4.0@aar'
+    compile fileTree(dir: 'libs', include: ['*.jar'])
+}

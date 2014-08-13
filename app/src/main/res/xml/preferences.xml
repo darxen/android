@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android" >
+
+    <PreferenceCategory
+        android:summary="Customize radar animation"
+        android:title="Animation Settings" >
+        <ListPreference
+            android:defaultValue="5"
+            android:entries="@array/initial_frames"
+            android:entryValues="@array/initial_frames"
+            android:key="InitialFrames"
+            android:summary="How many radar frames to initially download"
+            android:title="Initial Radar Frames" />
+        <ListPreference
+            android:defaultValue="15"
+            android:entries="@array/maximum_frames"
+            android:entryValues="@array/maximum_frames"
+            android:key="MaximumFrames"
+            android:summary="Maximum number of radar frames to keep"
+            android:title="Maximum Radar Frames" />
+        <ListPreference
+            android:defaultValue="250"
+            android:entries="@array/frame_delays"
+            android:entryValues="@array/frame_delays_values"
+            android:key="FrameDelay"
+            android:summary="How quickly the animation changes radar frames"
+            android:title="Animation Speed" />
+    </PreferenceCategory>
+    <PreferenceCategory
+        android:summary="Select Rendered Shapefiles"
+        android:title="Shapefiles" >
+        <CheckBoxPreference
+            android:defaultValue="true"
+            android:key="ShapefileStates"
+            android:summary="Draw state lines"
+            android:title="State Lines" />
+        <CheckBoxPreference
+            android:defaultValue="true"
+            android:key="ShapefileCounties"
+            android:summary="Draw county lines"
+            android:title="County Lines" />
+        <CheckBoxPreference
+            android:defaultValue="true"
+            android:key="ShapefileRadarSites"
+            android:summary="Draw available radar sites"
+            android:title="Radar Sites" />
+    </PreferenceCategory>
+
+</PreferenceScreen>

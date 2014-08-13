@@ -1,4 +1,9 @@
+.gradle
+.idea
 .metadata
+/local.properties
+build
 geotools
-shapelib
 radar
+shapelib
+app.apk
