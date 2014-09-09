@@ -55,13 +55,6 @@ public class SwitchRadarSiteDialog extends DialogFragment {
 		}).create();
 	}
 
-	@Override
-	public void onCancel(DialogInterface dialog) {
-		super.onCancel(dialog);
-
-		getActivity().finish();
-	}
-	
 	private SwitchRadarSiteDialogListener getCallbacks() {
 		FragmentActivity activity = getActivity();
 		if (activity == null)
