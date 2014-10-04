@@ -6,7 +6,7 @@ android {
 
     defaultConfig {
         applicationId "me.kevinwells.darxen"
-        minSdkVersion 11
+        minSdkVersion 10
         targetSdkVersion 18
         versionCode 9
         versionName "0.4.0"
