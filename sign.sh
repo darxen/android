@@ -2,7 +2,7 @@
 
 ./gradlew clean assembleRelease
 
-zipalign=`find /opt/android-sdk -name zipalign | tail -n 1`
+zipalign=`find -L /opt/android-sdk -name zipalign | tail -n 1`
 
 bins=app/build/outputs/apk
 
